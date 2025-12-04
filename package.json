@@ -1,11 +1,14 @@
 {
   "scripts": {
     "flow": "flow",
-    "build": "flow-remove-types --out-file dist/index.js index.js",
+    "build": "babel index.js -d dist/",
     "start": "node dist/index.js"
   },
   "devDependencies": {
-    "flow-bin": "^0.292.0",
-    "flow-remove-types": "^2.292.0"
+    "@babel/cli": "^7.28.3",
+    "@babel/core": "^7.28.5",
+    "@babel/preset-flow": "^7.27.1",
+    "babel-plugin-syntax-hermes-parser": "^0.32.1",
+    "flow-bin": "^0.292.0"
   }
 }
