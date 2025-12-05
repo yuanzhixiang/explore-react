@@ -5,7 +5,7 @@
       "name": "Launch Chrome",
       "request": "launch",
       "type": "chrome",
-      "url": "file:///Users/yuanzhixiang/workspace/project/explore-react/dist/index.html",
+      "url": "http://localhost:5173/",
       "webRoot": "${workspaceFolder}"
     },
     {
