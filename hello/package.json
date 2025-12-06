@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "name": "hello",
+  "dependencies": {
+    "webpack": "^1.14.0"
+  },
+  "scripts": {
+    "build": "webpack --config config.js"
+  }
+}
