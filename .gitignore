@@ -3,3 +3,5 @@ dist
 build
 
 fixtures/packaging/webpack/dev/output.js.map
+
+.idea
