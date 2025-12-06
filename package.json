@@ -1,7 +1,6 @@
 {
   "scripts": {
-    "dev": "vite",
-    "flow": "flow",
+    "dev": "pnpm build && vite",
     "build": "babel index.js -d dist/ --source-maps inline",
     "start": "node dist/index.js"
   },
