@@ -299,7 +299,7 @@ module.name_mapper='^shared/\(.*\)$' -> '<PROJECT_ROOT>/packages/shared/\1'
 
 
 [version]
-^0.292.0
+^0.279.0
 
 # ---------------------------------------------------------------#
 # NOTE: this file is generated.                                  #

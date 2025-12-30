@@ -27,8 +27,8 @@ importers:
         specifier: ^3.0.5
         version: 3.0.5
       flow-bin:
-        specifier: ^0.292.0
-        version: 0.292.0
+        specifier: ^0.279.0
+        version: 0.279.0
       vite:
         specifier: ^7.2.6
         version: 7.2.6
@@ -543,8 +543,8 @@ packages:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
     engines: {node: '>=8'}
 
-  flow-bin@0.292.0:
-    resolution: {integrity: sha512-PjI1om0xMo2zXE0cRH3/Fa44mJu/g6x9mgShaEW1LHJBLxa5ofw/+bz3LNWthZWh6G1+zxYWxOTNM+2rTEQ9eg==}
+  flow-bin@0.279.0:
+    resolution: {integrity: sha512-Xf0T82atOcEf5auHvJfUF+wWIxieBuUJZBu2hlAizdhAzwqSJic74ZLaL6N5SsE0SY9PxPf3Z/lBU7iRpRa9Lw==}
     engines: {node: '>=0.10.0'}
     hasBin: true
 
@@ -1309,7 +1309,7 @@ snapshots:
       to-regex-range: 5.0.1
     optional: true
 
-  flow-bin@0.292.0: {}
+  flow-bin@0.279.0: {}
 
   fs-readdir-recursive@1.1.0: {}
 

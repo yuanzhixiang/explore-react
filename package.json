@@ -17,7 +17,7 @@
     "babel-plugin-syntax-hermes-parser": "^0.32.1",
     "concurrently": "^9.2.1",
     "fbjs": "^3.0.5",
-    "flow-bin": "^0.292.0",
+    "flow-bin": "^0.279.0",
     "vite": "^7.2.6"
   }
 }
