@@ -289,6 +289,11 @@ module.name_mapper='ReactFizzConfig$' -> 'forks/ReactFizzConfig.dom.js'
 module.name_mapper='ReactFlightServerConfig$' -> 'forks/ReactFlightServerConfig.dom-browser.js'
 module.name_mapper='ReactFlightClientConfig$' -> 'forks/ReactFlightClientConfig.dom-browser.js'
 module.name_mapper='react-devtools-feature-flags' -> 'react-devtools-shared/src/config/DevToolsFeatureFlags.default'
+module.name_mapper='^react-reconciler/\(.*\)$' -> '<PROJECT_ROOT>/packages/react-reconciler/\1'
+module.name_mapper='^shared/\(.*\)$' -> '<PROJECT_ROOT>/packages/shared/\1'
+
+
+
 
 [version]
 ^0.292.0

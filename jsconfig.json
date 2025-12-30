@@ -4,7 +4,8 @@
     "paths": {
       "shared/*": ["packages/shared/*"],
       "react-dom/*": ["packages/react-dom/*"],
-      "react/*": ["packages/react/*"]
+      "react/*": ["packages/react/*"],
+      "react-reconciler/*": ["packages/react-reconciler/*"]
     },
     "moduleResolution": "node",
     "target": "ESNext",
