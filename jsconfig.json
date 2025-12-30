@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "shared/*": ["packages/shared/*"],
+      "react-dom/*": ["packages/react-dom/*"],
+      "react/*": ["packages/react/*"]
+    },
+    "moduleResolution": "node",
+    "target": "ESNext",
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["packages/**/*", "fixtures/**/*"]
+}
