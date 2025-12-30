@@ -39,10 +39,14 @@ module.exports = {
   optimizeDeps: {
     exclude: ["react", "react-dom", "react-dom/client"],
   },
-  // Vite 默认不允许访问项目外目录。你把允许范围扩到仓库根，这样才能读取 build/node_modules/...。
   server: {
+    // Vite 默认不允许访问项目外目录。你把允许范围扩到仓库根，这样才能读取 build/node_modules/...
     fs: {
       allow: [path.resolve(__dirname, "../../../../")],
+    },
+    // 让 Vite 监听 build/node_modules 的改动
+    watch: {
+      ignored: ["**/node_modules/**", "!**/build/node_modules/**"],
     },
   },
   // 生成 build 时也保留 sourcemap，保证生产构建时仍能映射回源码。
