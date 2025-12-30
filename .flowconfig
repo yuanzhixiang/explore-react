@@ -263,13 +263,16 @@
 .*/packages/.*/forks/ReactFlightClientConfig.dom-node.js
 .*/packages/.*/forks/ReactFlightClientConfig.markup.js
 
+.*/scripts/flow/.*
+
+
 [libs]
 ./node_modules/fbjs/flow/lib/dev.js
 ./scripts/flow/environment.js
 ./scripts/flow/react-devtools.js
 ./scripts/flow/react-native-host-hooks.js
 ./scripts/flow/xplat.js
-./flow-typed/environments/
+; ./flow-typed/environments/
 
 
 [lints]
