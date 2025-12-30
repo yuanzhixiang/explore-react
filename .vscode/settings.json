@@ -6,5 +6,7 @@
   // 严格按照你设定的规则执行，不根据文件的缩进模式自动调整
   "editor.detectIndentation": false,
   // 保存时自动格式化
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  // 禁用 JS 校验，但保留语言服务（跳转、补全等都还在）
+  "javascript.validate.enable": false
 }

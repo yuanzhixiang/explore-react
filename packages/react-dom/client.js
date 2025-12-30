@@ -1,4 +1,10 @@
-console.log("react-dom/client module loaded");
-console.log("react-dom/client module loaded2");
-console.log("react-dom/client module loaded3");
-throw new Error("react-dom/client not implemented yet");
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow
+ */
+
+export { createRoot, hydrateRoot, version } from "./src/client/ReactDOMClient";

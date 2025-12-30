@@ -6,13 +6,15 @@
     "build:react": "babel packages/react -d build/node_modules/react --source-maps --extensions .js,.jsx",
     "build:react-dom": "babel packages/react-dom -d build/node_modules/react-dom --source-maps --extensions .js,.jsx",
     "watch:react": "babel packages/react -d build/node_modules/react --source-maps --extensions .js,.jsx --watch",
-    "watch:react-dom": "babel packages/react-dom -d build/node_modules/react-dom --source-maps --extensions .js,.jsx --watch"
+    "watch:react-dom": "babel packages/react-dom -d build/node_modules/react-dom --source-maps --extensions .js,.jsx --watch",
+    "dev:fixture": "concurrently -k -n react,react-dom,vite \"pnpm run watch:react\" \"pnpm run watch:react-dom\" \"pnpm -C fixtures/packaging/webpack/dev dev\""
   },
   "devDependencies": {
     "@babel/cli": "^7.28.3",
     "@babel/core": "^7.28.5",
     "@babel/preset-flow": "^7.27.1",
     "babel-plugin-syntax-hermes-parser": "^0.32.1",
+    "concurrently": "^9.2.1",
     "flow-bin": "^0.292.0",
     "vite": "^7.2.6"
   }
