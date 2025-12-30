@@ -1,9 +1,12 @@
-export function createRoot(container, options) {
+import ReactVersion from "shared/ReactVersion";
+
+function createRoot(container, options) {
+  console.log("React Version:", ReactVersion);
   throw new Error("Not implemented");
 }
 
-export function hydrateRoot(container, initialChildren, options) {
+function hydrateRoot(container, initialChildren, options) {
   throw new Error("Not implemented");
 }
 
-export const version = "0.0.0-unimplemented";
+export { ReactVersion as version, createRoot, hydrateRoot };

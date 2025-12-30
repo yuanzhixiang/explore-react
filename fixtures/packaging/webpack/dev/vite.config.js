@@ -33,11 +33,18 @@ module.exports = {
           "../../../../build/node_modules/react/index.js"
         ),
       },
+      {
+        find: /^shared\/(.+)$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../../../build/node_modules/shared/$1.js"
+        ),
+      },
     ],
   },
   // Vite 预构建依赖会把包提前打进缓存，这会绕过你的 alias。把这些包排除，确保每次都走你指定的路径
   optimizeDeps: {
-    exclude: ["react", "react-dom", "react-dom/client"],
+    exclude: ["react", "react-dom", "react-dom/client", "shared"],
   },
   server: {
     // Vite 默认不允许访问项目外目录。你把允许范围扩到仓库根，这样才能读取 build/node_modules/...
