@@ -1,12 +1,9 @@
 {
   "private": true,
   "name": "webpack-dev-fixture",
-  "dependencies": {
-    "webpack": "^1.14.0"
-  },
   "scripts": {
-    "dev": "pnpm build && vite",
-    "build": "rm -f output.js && webpack --config config.js"
+    "dev": "vite --config vite.config.js",
+    "build": "vite build --config vite.config.js"
   },
   "devDependencies": {
     "vite": "^7.2.6"

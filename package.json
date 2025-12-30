@@ -2,7 +2,11 @@
   "scripts": {
     "dev": "pnpm build && vite",
     "build": "babel index.js -d dist/ --source-maps inline",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "build:react": "babel packages/react -d build/node_modules/react --source-maps --extensions .js,.jsx",
+    "build:react-dom": "babel packages/react-dom -d build/node_modules/react-dom --source-maps --extensions .js,.jsx",
+    "watch:react": "babel packages/react -d build/node_modules/react --source-maps --extensions .js,.jsx --watch",
+    "watch:react-dom": "babel packages/react-dom -d build/node_modules/react-dom --source-maps --extensions .js,.jsx --watch"
   },
   "devDependencies": {
     "@babel/cli": "^7.28.3",

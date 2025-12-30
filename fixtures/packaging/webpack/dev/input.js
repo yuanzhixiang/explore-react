@@ -7,4 +7,4 @@
 
 // root.render(React.createElement('h1', null, 'Hello World!'));
 
-require("react-dom/client");
+import "react-dom/client";

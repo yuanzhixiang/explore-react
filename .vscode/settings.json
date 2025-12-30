@@ -6,5 +6,5 @@
   // 严格按照你设定的规则执行，不根据文件的缩进模式自动调整
   "editor.detectIndentation": false,
   // 保存时自动格式化
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": true
 }
