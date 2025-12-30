@@ -8,7 +8,7 @@
  */
 import type {ReactNodeList, ReactFormState} from 'shared/ReactTypes';
 import type {
-  // FiberRoot,
+  FiberRoot,
   TransitionTracingCallbacks,
 } from 'react-reconciler/src/ReactInternalTypes';
 

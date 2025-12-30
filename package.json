@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "dev": "pnpm build && vite",
+    "dev:old": "pnpm build && vite",
     "build": "babel index.js -d dist/ --source-maps inline",
     "start": "node dist/index.js",
     "build:react": "babel packages/react -d build/node_modules/react --source-maps --extensions .js,.jsx",
@@ -8,7 +8,7 @@
     "watch:react": "babel packages/react -d build/node_modules/react --source-maps --extensions .js,.jsx --watch",
     "watch:react-dom": "babel packages/react-dom -d build/node_modules/react-dom --source-maps --extensions .js,.jsx --watch",
     "watch:packages": "babel packages -d build/node_modules --source-maps --extensions .js,.jsx --watch",
-    "dev:fixture": "concurrently -k -n build,vite \"pnpm run watch:packages\" \"pnpm -C fixtures/packaging/webpack/dev dev\""
+    "dev": "concurrently -k -n build,vite \"pnpm run watch:packages\" \"pnpm -C fixtures/packaging/webpack/dev dev\""
   },
   "devDependencies": {
     "@babel/cli": "^7.28.3",

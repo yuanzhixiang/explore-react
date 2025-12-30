@@ -7,6 +7,50 @@
  * @flow
  */
 
+import { renameElementSymbol } from "shared/ReactFeatureFlags";
+
+// ATTENTION
+// When adding new symbols to this file,
+// Please consider also adding to 'react-devtools-shared/src/backend/ReactSymbols'
+
+// The Symbol used to tag the ReactElement-like types.
+export const REACT_LEGACY_ELEMENT_TYPE: symbol = Symbol.for("react.element");
+export const REACT_ELEMENT_TYPE: symbol = renameElementSymbol
+  ? Symbol.for("react.transitional.element")
+  : REACT_LEGACY_ELEMENT_TYPE;
+export const REACT_PORTAL_TYPE: symbol = Symbol.for("react.portal");
+export const REACT_FRAGMENT_TYPE: symbol = Symbol.for("react.fragment");
+export const REACT_STRICT_MODE_TYPE: symbol = Symbol.for("react.strict_mode");
+export const REACT_PROFILER_TYPE: symbol = Symbol.for("react.profiler");
+export const REACT_CONSUMER_TYPE: symbol = Symbol.for("react.consumer");
+export const REACT_CONTEXT_TYPE: symbol = Symbol.for("react.context");
+export const REACT_FORWARD_REF_TYPE: symbol = Symbol.for("react.forward_ref");
+export const REACT_SUSPENSE_TYPE: symbol = Symbol.for("react.suspense");
+export const REACT_SUSPENSE_LIST_TYPE: symbol = Symbol.for(
+  "react.suspense_list"
+);
+export const REACT_MEMO_TYPE: symbol = Symbol.for("react.memo");
+export const REACT_LAZY_TYPE: symbol = Symbol.for("react.lazy");
+export const REACT_SCOPE_TYPE: symbol = Symbol.for("react.scope");
+export const REACT_ACTIVITY_TYPE: symbol = Symbol.for("react.activity");
+export const REACT_LEGACY_HIDDEN_TYPE: symbol = Symbol.for(
+  "react.legacy_hidden"
+);
+export const REACT_TRACING_MARKER_TYPE: symbol = Symbol.for(
+  "react.tracing_marker"
+);
+
+export const REACT_MEMO_CACHE_SENTINEL: symbol = Symbol.for(
+  "react.memo_cache_sentinel"
+);
+
+export const REACT_VIEW_TRANSITION_TYPE: symbol = Symbol.for(
+  "react.view_transition"
+);
+
+const MAYBE_ITERATOR_SYMBOL = Symbol.iterator;
+const FAUX_ITERATOR_SYMBOL = "@@iterator";
+
 // This is actually a symbol but Flow doesn't support comparison of symbols to refine.
 // We use a boolean since in our code we often expect string (key) or number (index),
 // so by pretending to be a boolean we cover a lot of cases that don't consider this case.

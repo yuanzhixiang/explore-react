@@ -5,7 +5,10 @@
       "shared/*": ["packages/shared/*"],
       "react-dom/*": ["packages/react-dom/*"],
       "react/*": ["packages/react/*"],
-      "react-reconciler/*": ["packages/react-reconciler/*"]
+      "react-reconciler/*": ["packages/react-reconciler/*"],
+      "react-client/*": ["packages/react-client/*"],
+      "react-dom-bindings/*": ["packages/react-dom-bindings/*"],
+      "react-server/*": ["packages/react-server/*"]
     },
     "moduleResolution": "node",
     "target": "ESNext",

@@ -47,6 +47,27 @@ module.exports = {
           "../../../../build/node_modules/react-reconciler/$1.js"
         ),
       },
+      {
+        find: /^react-client\/(.*)$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../../../build/node_modules/react-client/$1"
+        ),
+      },
+      {
+        find: /^react-dom-bindings\/(.*)$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../../../build/node_modules/react-dom-bindings/$1"
+        ),
+      },
+      {
+        find: /^react-server\/(.*)$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../../../build/node_modules/react-server/$1"
+        ),
+      },
     ],
   },
   // Vite 预构建依赖会把包提前打进缓存，这会绕过你的 alias。把这些包排除，确保每次都走你指定的路径
