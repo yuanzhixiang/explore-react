@@ -1,12 +1,14 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow
+ */
+
+import { createRoot, hydrateRoot } from "./ReactDOMRoot";
+
 import ReactVersion from "shared/ReactVersion";
-
-function createRoot(container, options) {
-  console.log("React Version:", ReactVersion);
-  throw new Error("Not implemented");
-}
-
-function hydrateRoot(container, initialChildren, options) {
-  throw new Error("Not implemented");
-}
 
 export { ReactVersion as version, createRoot, hydrateRoot };
