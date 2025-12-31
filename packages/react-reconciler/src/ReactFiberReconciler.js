@@ -23,6 +23,8 @@ import type {ReactNodeList, ReactFormState} from 'shared/ReactTypes';
 import type {Lane} from './ReactFiberLane';
 import type {ActivityState} from './ReactFiberActivityComponent';
 import type {SuspenseState} from './ReactFiberSuspenseComponent';
+import {createFiberRoot} from './ReactFiberRoot';
+import {registerDefaultIndicator} from './ReactFiberAsyncAction';
 
 type OpaqueRoot = FiberRoot;
 
@@ -58,5 +60,23 @@ export function createContainer(
   onDefaultTransitionIndicator: () => void | (() => void),
   transitionCallbacks: null | TransitionTracingCallbacks,
 ): OpaqueRoot {
-  throw new Error('Not implemented');
+  const hydrate = false;
+  const initialChildren = null;
+  const root = createFiberRoot(
+    containerInfo,
+    tag,
+    hydrate,
+    initialChildren,
+    hydrationCallbacks,
+    isStrictMode,
+    identifierPrefix,
+    null,
+    onUncaughtError,
+    onCaughtError,
+    onRecoverableError,
+    onDefaultTransitionIndicator,
+    transitionCallbacks,
+  );
+  registerDefaultIndicator(onDefaultTransitionIndicator);
+  return root;
 }
