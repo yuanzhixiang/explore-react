@@ -12,5 +12,7 @@
   // 这两个是 VSCode 的 TS/JS 语言服务开关，默认 Cmd+Click 会跳到类型声明，
   // 开启 preferGoToSourceDefinition 后会优先尝试跳到真实源码实现，（如果能找到），找不到才回退到 .d.ts
   "javascript.preferGoToSourceDefinition": true,
-  "typescript.preferGoToSourceDefinition": true
+  "typescript.preferGoToSourceDefinition": true,
+  // 指定 prettier 的路径为项目本地安装的版本，确保使用一致的格式化规则
+  "prettier.prettierPath": "./node_modules/prettier"
 }

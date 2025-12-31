@@ -11,6 +11,7 @@ import type {
   FiberRoot,
   TransitionTracingCallbacks,
 } from 'react-reconciler/src/ReactInternalTypes';
+import {isValidContainer} from 'react-dom-bindings/src/client/ReactDOMContainer';
 
 export type RootType = {
   render(children: ReactNodeList): void,
@@ -69,9 +70,13 @@ export type HydrateRootOptions = {
 
 export function createRoot(
   container: Element | Document | DocumentFragment,
-  options?: CreateRootOptions
-) {
-  throw new Error("Not implemented");
+  options?: CreateRootOptions,
+): RootType {
+  if (!isValidContainer(container)) {
+    throw new Error('Target container is not a DOM element.');
+  }
+
+  throw new Error('Not implemented');
 }
 
 export function hydrateRoot(
@@ -79,5 +84,5 @@ export function hydrateRoot(
   initialChildren: ReactNodeList,
   options?: HydrateRootOptions,
 ): RootType {
-  throw new Error("Not implemented");
+  throw new Error('Not implemented');
 }
