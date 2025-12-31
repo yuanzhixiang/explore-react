@@ -109,6 +109,9 @@ export function createRoot(
   let transitionCallbacks = null;
 
   if (options !== null && options !== undefined) {
+    if (options.unstable_transitionCallbacks !== undefined) {
+      transitionCallbacks = options.unstable_transitionCallbacks;
+    }
     throw new Error('Not implemented');
   }
 
