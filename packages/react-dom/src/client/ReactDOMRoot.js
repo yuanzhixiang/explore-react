@@ -72,6 +72,7 @@ export function createRoot(
   container: Element | Document | DocumentFragment,
   options?: CreateRootOptions,
 ): RootType {
+  // 在真正挂载前做校验，如果不是合法容器就直接抛错，防止 React 渲染到非法节点
   if (!isValidContainer(container)) {
     throw new Error('Target container is not a DOM element.');
   }
