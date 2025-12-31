@@ -75,7 +75,7 @@ import {
 } from 'react-dom-bindings/src/client/ReactDOMComponentTree';
 
 import {
-  // createContainer,
+  createContainer,
   // createHydrationContainer,
   // updateContainer,
   // updateContainerSync,
@@ -86,6 +86,7 @@ import {
   defaultOnRecoverableError,
 } from 'react-reconciler/src/ReactFiberReconciler';
 import {defaultOnDefaultTransitionIndicator} from './ReactDOMDefaultTransitionIndicator';
+import {ConcurrentRoot} from 'react-reconciler/src/ReactRootTags';
 
 export function createRoot(
   container: Element | Document | DocumentFragment,
@@ -110,6 +111,21 @@ export function createRoot(
   if (options !== null && options !== undefined) {
     throw new Error('Not implemented');
   }
+
+  const root = createContainer(
+    container,
+    ConcurrentRoot,
+    null,
+    isStrictMode,
+    concurrentUpdatesByDefaultOverride,
+    identifierPrefix,
+    onUncaughtError,
+    onCaughtError,
+    onRecoverableError,
+    onDefaultTransitionIndicator,
+    transitionCallbacks,
+  );
+  markContainerAsRoot(root.current, container);
 
   throw new Error('Not implemented');
 }
