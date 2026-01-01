@@ -6,12 +6,20 @@
  *
  * @flow
  */
+
 import type {ReactNodeList, ReactFormState} from 'shared/ReactTypes';
 import type {
   FiberRoot,
   TransitionTracingCallbacks,
 } from 'react-reconciler/src/ReactInternalTypes';
+
 import {isValidContainer} from 'react-dom-bindings/src/client/ReactDOMContainer';
+// import {queueExplicitHydrationTarget} from 'react-dom-bindings/src/events/ReactDOMEventReplaying';
+import {REACT_ELEMENT_TYPE} from 'shared/ReactSymbols';
+import {
+  disableCommentsAsDOMContainers,
+  enableDefaultTransitionIndicator,
+} from 'shared/ReactFeatureFlags';
 
 export type RootType = {
   render(children: ReactNodeList): void,
@@ -74,6 +82,14 @@ import {
   unmarkContainerAsRoot,
 } from 'react-dom-bindings/src/client/ReactDOMComponentTree';
 
+// import {
+//   isContainerMarkedAsRoot,
+//   markContainerAsRoot,
+//   unmarkContainerAsRoot,
+// } from 'react-dom-bindings/src/client/ReactDOMComponentTree';
+import {listenToAllSupportedEvents} from 'react-dom-bindings/src/events/DOMPluginEventSystem';
+import {COMMENT_NODE} from 'react-dom-bindings/src/client/HTMLNodeType';
+
 import {
   createContainer,
   // createHydrationContainer,
@@ -87,6 +103,11 @@ import {
 } from 'react-reconciler/src/ReactFiberReconciler';
 import {defaultOnDefaultTransitionIndicator} from './ReactDOMDefaultTransitionIndicator';
 import {ConcurrentRoot} from 'react-reconciler/src/ReactRootTags';
+
+// $FlowFixMe[missing-this-annot]
+function ReactDOMRoot(internalRoot: FiberRoot) {
+  this._internalRoot = internalRoot;
+}
 
 export function createRoot(
   container: Element | Document | DocumentFragment,
@@ -130,7 +151,16 @@ export function createRoot(
   );
   markContainerAsRoot(root.current, container);
 
-  throw new Error('Not implemented');
+  const rootContainerElement: Document | Element | DocumentFragment =
+    // 如果没有禁用用注释节点当容器，那么则用他的 parentNode 做容器
+    !disableCommentsAsDOMContainers && container.nodeType === COMMENT_NODE
+      ? (container.parentNode: any)
+      : // 如果直接用注释节点当容器返回，后续流程可能会出现报错
+        container;
+  listenToAllSupportedEvents(rootContainerElement);
+
+  // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
+  return new ReactDOMRoot(root);
 }
 
 export function hydrateRoot(
