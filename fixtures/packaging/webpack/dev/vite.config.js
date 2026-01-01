@@ -74,10 +74,13 @@ module.exports = {
   optimizeDeps: {
     exclude: [
       'react',
+      'react-client',
       'react-dom',
       'react-dom/client',
-      'shared',
+      'react-dom-bindings',
       'react-reconciler',
+      'react-server',
+      'shared',
     ],
   },
   server: {
