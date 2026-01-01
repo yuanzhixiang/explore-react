@@ -7,16 +7,16 @@
  * @flow
  */
 
-import type { DOMEventName } from "../events/DOMEventNames";
-import type { Fiber, FiberRoot } from "react-reconciler/src/ReactInternalTypes";
+import type {DOMEventName} from '../events/DOMEventNames';
+import type {Fiber, FiberRoot} from 'react-reconciler/src/ReactInternalTypes';
 import type {
   BoundingRect,
   IntersectionObserverOptions,
   ObserveVisibleRectsCallback,
-} from "react-reconciler/src/ReactTestSelectors";
-import type { ReactContext, ReactScopeInstance } from "shared/ReactTypes";
-import type { AncestorInfoDev } from "./validateDOMNesting";
-import type { FormStatus } from "react-dom-bindings/src/shared/ReactDOMFormActions";
+} from 'react-reconciler/src/ReactTestSelectors';
+import type {ReactContext, ReactScopeInstance} from 'shared/ReactTypes';
+import type {AncestorInfoDev} from './validateDOMNesting';
+import type {FormStatus} from 'react-dom-bindings/src/shared/ReactDOMFormActions';
 import type {
   CrossOriginEnum,
   PreloadImplOptions,
@@ -24,10 +24,10 @@ import type {
   PreinitStyleOptions,
   PreinitScriptOptions,
   PreinitModuleScriptOptions,
-} from "react-dom/src/shared/ReactDOMTypes";
-import type { TransitionTypes } from "react/src/ReactTransitionType";
+} from 'react-dom/src/shared/ReactDOMTypes';
+import type {TransitionTypes} from 'react/src/ReactTransitionType';
 
-export const rendererPackageName = "react-dom";
+export const rendererPackageName = 'react-dom';
 export const extraDevToolsConfig = null;
 
 export type Type = string;
@@ -41,14 +41,14 @@ export type Props = {
   style?: {
     display?: string,
     viewTransitionName?: string,
-    "view-transition-name"?: string,
+    'view-transition-name'?: string,
     viewTransitionClass?: string,
-    "view-transition-class"?: string,
+    'view-transition-class'?: string,
     margin?: string,
     marginTop?: string,
-    "margin-top"?: string,
+    'margin-top'?: string,
     marginBottom?: string,
-    "margin-bottom"?: string,
+    'margin-bottom'?: string,
     ...
   },
   bottom?: null | number,
@@ -64,7 +64,7 @@ export type Props = {
   multiple?: boolean,
   src?: string | Blob | MediaSource | MediaStream, // TODO: Response
   srcSet?: string,
-  loading?: "eager" | "lazy",
+  loading?: 'eager' | 'lazy',
   onLoad?: (event: any) => void,
   ...
 };
@@ -89,9 +89,9 @@ export type EventTargetChildElement = {
 };
 
 export type Container =
-  | interface extends Element { _reactRootContainer?: FiberRoot }
-  | interface extends Document { _reactRootContainer?: FiberRoot }
-  | interface extends DocumentFragment { _reactRootContainer?: FiberRoot };
+  | interface extends Element {_reactRootContainer?: FiberRoot}
+  | interface extends Document {_reactRootContainer?: FiberRoot}
+  | interface extends DocumentFragment {_reactRootContainer?: FiberRoot};
 export type Instance = Element;
 export type TextInstance = Text;
 
@@ -142,24 +142,24 @@ type SelectionInformation = {
   selectionRange: mixed,
 };
 
-const SUPPRESS_HYDRATION_WARNING = "suppressHydrationWarning";
+const SUPPRESS_HYDRATION_WARNING = 'suppressHydrationWarning';
 
-const ACTIVITY_START_DATA = "&";
-const ACTIVITY_END_DATA = "/&";
-const SUSPENSE_START_DATA = "$";
-const SUSPENSE_END_DATA = "/$";
-const SUSPENSE_PENDING_START_DATA = "$?";
-const SUSPENSE_QUEUED_START_DATA = "$~";
-const SUSPENSE_FALLBACK_START_DATA = "$!";
-const PREAMBLE_CONTRIBUTION_HTML = "html";
-const PREAMBLE_CONTRIBUTION_BODY = "body";
-const PREAMBLE_CONTRIBUTION_HEAD = "head";
-const FORM_STATE_IS_MATCHING = "F!";
-const FORM_STATE_IS_NOT_MATCHING = "F";
+const ACTIVITY_START_DATA = '&';
+const ACTIVITY_END_DATA = '/&';
+const SUSPENSE_START_DATA = '$';
+const SUSPENSE_END_DATA = '/$';
+const SUSPENSE_PENDING_START_DATA = '$?';
+const SUSPENSE_QUEUED_START_DATA = '$~';
+const SUSPENSE_FALLBACK_START_DATA = '$!';
+const PREAMBLE_CONTRIBUTION_HTML = 'html';
+const PREAMBLE_CONTRIBUTION_BODY = 'body';
+const PREAMBLE_CONTRIBUTION_HEAD = 'head';
+const FORM_STATE_IS_MATCHING = 'F!';
+const FORM_STATE_IS_NOT_MATCHING = 'F';
 
-const DOCUMENT_READY_STATE_LOADING = "loading";
+const DOCUMENT_READY_STATE_LOADING = 'loading';
 
-const STYLE = "style";
+const STYLE = 'style';
 
 opaque type HostContextNamespace = 0 | 1 | 2;
 export const HostContextNamespaceNone: HostContextNamespace = 0;
@@ -182,12 +182,12 @@ export type FragmentInstanceType = {
   addEventListener(
     type: string,
     listener: EventListener,
-    optionsOrUseCapture?: EventListenerOptionsOrUseCapture
+    optionsOrUseCapture?: EventListenerOptionsOrUseCapture,
   ): void,
   removeEventListener(
     type: string,
     listener: EventListener,
-    optionsOrUseCapture?: EventListenerOptionsOrUseCapture
+    optionsOrUseCapture?: EventListenerOptionsOrUseCapture,
   ): void,
   dispatchEvent(event: Event): boolean,
   focus(focusOptions?: FocusOptions): void,
@@ -214,3 +214,5 @@ interface CustomTimeline {
 }
 
 export type GestureTimeline = AnimationTimeline | CustomTimeline;
+
+export const noTimeout: -1 = -1;

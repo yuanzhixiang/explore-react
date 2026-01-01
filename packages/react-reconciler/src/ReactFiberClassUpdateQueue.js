@@ -84,8 +84,49 @@
 // regardless of priority. Intermediate state may vary according to system
 // resources, but the final state is always the same.
 
-import type { Fiber, FiberRoot } from "./ReactInternalTypes";
-import type { Lanes, Lane } from "./ReactFiberLane";
+import type {Fiber, FiberRoot} from './ReactInternalTypes';
+import type {Lanes, Lane} from './ReactFiberLane';
+
+import {
+  NoLane,
+  NoLanes,
+  OffscreenLane,
+  // isSubsetOfLanes,
+  // mergeLanes,
+  // removeLanes,
+  // isTransitionLane,
+  // intersectLanes,
+  // markRootEntangled,
+} from './ReactFiberLane';
+// import {
+//   enterDisallowedContextReadInDEV,
+//   exitDisallowedContextReadInDEV,
+// } from './ReactFiberNewContext';
+// import {
+//   Callback,
+//   Visibility,
+//   ShouldCapture,
+//   DidCapture,
+// } from './ReactFiberFlags';
+// import getComponentNameFromFiber from './getComponentNameFromFiber';
+
+// import {StrictLegacyMode} from './ReactTypeOfMode';
+// import {
+//   markSkippedUpdateLanes,
+//   isUnsafeClassRenderPhaseUpdate,
+//   getWorkInProgressRootRenderLanes,
+// } from './ReactFiberWorkLoop';
+// import {
+//   enqueueConcurrentClassUpdate,
+//   unsafe_markUpdateLaneFromFiberToRoot,
+// } from './ReactFiberConcurrentUpdates';
+// import {setIsStrictModeForDevtools} from './ReactFiberDevToolsHook';
+
+// import assign from 'shared/assign';
+// import {
+//   peekEntangledActionLane,
+//   peekEntangledActionThenable,
+// } from './ReactFiberAsyncAction';
 
 export type Update<State> = {
   lane: Lane,
@@ -110,3 +151,20 @@ export type UpdateQueue<State> = {
   shared: SharedQueue<State>,
   callbacks: Array<() => mixed> | null,
 };
+
+export function initializeUpdateQueue<State>(fiber: Fiber): void {
+  const queue: UpdateQueue<State> = {
+    // memoizedState 是该 Fiber 上一次完成渲染后的状态快照
+    baseState: fiber.memoizedState,
+    firstBaseUpdate: null,
+    lastBaseUpdate: null,
+    shared: {
+      pending: null,
+      lanes: NoLanes,
+      hiddenCallbacks: null,
+    },
+    callbacks: null,
+  };
+  // updateQueue 就是这个 Fiber 的待处理更新队列
+  fiber.updateQueue = queue;
+}
