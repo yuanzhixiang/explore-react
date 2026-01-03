@@ -64,13 +64,13 @@ import {
 //   addEventBubbleListenerWithPassiveFlag,
 //   addEventCaptureListenerWithPassiveFlag,
 // } from './EventListener';
-// import * as BeforeInputEventPlugin from './plugins/BeforeInputEventPlugin';
-// import * as ChangeEventPlugin from './plugins/ChangeEventPlugin';
+import * as BeforeInputEventPlugin from './plugins/BeforeInputEventPlugin';
+import * as ChangeEventPlugin from './plugins/ChangeEventPlugin';
 import * as EnterLeaveEventPlugin from './plugins/EnterLeaveEventPlugin';
-// import * as SelectEventPlugin from './plugins/SelectEventPlugin';
+import * as SelectEventPlugin from './plugins/SelectEventPlugin';
 import * as SimpleEventPlugin from './plugins/SimpleEventPlugin';
 // import * as FormActionEventPlugin from './plugins/FormActionEventPlugin';
-// import * as ScrollEndEventPlugin from './plugins/ScrollEndEventPlugin';
+import * as ScrollEndEventPlugin from './plugins/ScrollEndEventPlugin';
 
 // import reportGlobalError from 'shared/reportGlobalError';
 
