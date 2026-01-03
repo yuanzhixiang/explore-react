@@ -47,7 +47,7 @@ import {
 import {COMMENT_NODE, DOCUMENT_NODE} from '../client/HTMLNodeType';
 // import {batchedUpdates} from './ReactDOMUpdateBatching';
 // import getListener from './getListener';
-// import {passiveBrowserEventsSupported} from './checkPassiveEvents';
+import {passiveBrowserEventsSupported} from './checkPassiveEvents';
 
 import {
   enableLegacyFBSupport,
@@ -57,13 +57,13 @@ import {
   enableScrollEndPolyfill,
 } from 'shared/ReactFeatureFlags';
 import {createEventListenerWrapperWithPriority} from './ReactDOMEventListener';
-// import {
-//   removeEventListener,
-//   addEventCaptureListener,
-//   addEventBubbleListener,
-//   addEventBubbleListenerWithPassiveFlag,
-//   addEventCaptureListenerWithPassiveFlag,
-// } from './EventListener';
+import {
+  removeEventListener,
+  addEventCaptureListener,
+  addEventBubbleListener,
+  addEventBubbleListenerWithPassiveFlag,
+  addEventCaptureListenerWithPassiveFlag,
+} from './EventListener';
 import * as BeforeInputEventPlugin from './plugins/BeforeInputEventPlugin';
 import * as ChangeEventPlugin from './plugins/ChangeEventPlugin';
 import * as EnterLeaveEventPlugin from './plugins/EnterLeaveEventPlugin';
@@ -238,6 +238,80 @@ function addTrappedEventListener(
     domEventName,
     eventSystemFlags,
   );
+  // If passive option is not supported, then the event will be
+  // active and not passive.
+  let isPassiveListener: void | boolean = undefined;
+  if (passiveBrowserEventsSupported) {
+    // Browsers introduced an intervention, making these events
+    // passive by default on document. React doesn't bind them
+    // to document anymore, but changing this now would undo
+    // the performance wins from the change. So we emulate
+    // the existing behavior manually on the roots now.
+    // https://github.com/facebook/react/issues/19651
+    if (
+      domEventName === 'touchstart' ||
+      domEventName === 'touchmove' ||
+      domEventName === 'wheel'
+    ) {
+      isPassiveListener = true;
+    }
+  }
 
-  throw new Error('Not implemented: addTrappedEventListener');
+  // 在 legacy FB 兼容模式下，某些延迟监听器不挂在容器上，而改挂到 document 上
+  targetContainer =
+    // enableLegacyFBSupport 开启且 isDeferredListenerForLegacyFBSupport 为真
+    enableLegacyFBSupport && isDeferredListenerForLegacyFBSupport
+      ? // 把 targetContainer 换成它的 ownerDocument（也就是 document）
+        (targetContainer: any).ownerDocument
+      : // 保持原来的 targetContainer
+        targetContainer;
+
+  let unsubscribeListener;
+  // When legacyFBSupport is enabled, it's for when we
+  // want to add a one time event listener to a container.
+  // This should only be used with enableLegacyFBSupport
+  // due to requirement to provide compatibility with
+  // internal FB www event tooling. This works by removing
+  // the event listener as soon as it is invoked. We could
+  // also attempt to use the {once: true} param on
+  // addEventListener, but that requires support and some
+  // browsers do not support this today, and given this is
+  // to support legacy code patterns, it's likely they'll
+  // need support for such browsers.
+  if (enableLegacyFBSupport && isDeferredListenerForLegacyFBSupport) {
+    throw new Error('Not implemented: addTrappedEventListener');
+  }
+
+  // TODO: There are too many combinations here. Consolidate them.
+  if (isCapturePhaseListener) {
+    if (isPassiveListener !== undefined) {
+      unsubscribeListener = addEventCaptureListenerWithPassiveFlag(
+        targetContainer,
+        domEventName,
+        listener,
+        isPassiveListener,
+      );
+    } else {
+      unsubscribeListener = addEventCaptureListener(
+        targetContainer,
+        domEventName,
+        listener,
+      );
+    }
+  } else {
+    if (isPassiveListener !== undefined) {
+      unsubscribeListener = addEventBubbleListenerWithPassiveFlag(
+        targetContainer,
+        domEventName,
+        listener,
+        isPassiveListener,
+      );
+    } else {
+      unsubscribeListener = addEventBubbleListener(
+        targetContainer,
+        domEventName,
+        listener,
+      );
+    }
+  }
 }
