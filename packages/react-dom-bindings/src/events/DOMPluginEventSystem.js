@@ -17,14 +17,14 @@ import type {
 import type {Fiber} from 'react-reconciler/src/ReactInternalTypes';
 
 import {allNativeEvents} from './EventRegistry';
-// import {
-//   SHOULD_NOT_DEFER_CLICK_FOR_FB_SUPPORT_MODE,
-//   IS_LEGACY_FB_SUPPORT_MODE,
-//   SHOULD_NOT_PROCESS_POLYFILL_EVENT_PLUGINS,
-//   IS_CAPTURE_PHASE,
-//   IS_EVENT_HANDLE_NON_MANAGED_NODE,
-//   IS_NON_DELEGATED,
-// } from './EventSystemFlags';
+import {
+  SHOULD_NOT_DEFER_CLICK_FOR_FB_SUPPORT_MODE,
+  IS_LEGACY_FB_SUPPORT_MODE,
+  SHOULD_NOT_PROCESS_POLYFILL_EVENT_PLUGINS,
+  IS_CAPTURE_PHASE,
+  IS_EVENT_HANDLE_NON_MANAGED_NODE,
+  IS_NON_DELEGATED,
+} from './EventSystemFlags';
 // import {isReplayingEvent} from './CurrentReplayingEvent';
 
 import {
@@ -146,30 +146,72 @@ export const nonDelegatedEvents: Set<DOMEventName> = new Set([
   ...mediaEventTypes,
 ]);
 
+export function listenToNativeEvent(
+  domEventName: DOMEventName,
+  isCapturePhaseListener: boolean,
+  target: EventTarget,
+): void {
+  if (__DEV__) {
+    if (nonDelegatedEvents.has(domEventName) && !isCapturePhaseListener) {
+      console.error(
+        'Did not expect a listenToNativeEvent() call for "%s" in the bubble phase. ' +
+          'This is a bug in React. Please file an issue.',
+        domEventName,
+      );
+    }
+  }
+
+  let eventSystemFlags = 0;
+  if (isCapturePhaseListener) {
+    eventSystemFlags |= IS_CAPTURE_PHASE;
+  }
+  addTrappedEventListener(
+    target,
+    domEventName,
+    eventSystemFlags,
+    isCapturePhaseListener,
+  );
+}
+
 const listeningMarker = '_reactListening' + Math.random().toString(36).slice(2);
 
+// 在 rootContainerElement 上监听所有支持的原生事件
 export function listenToAllSupportedEvents(rootContainerElement: EventTarget) {
+  // 如果该根容器还没打过“已监听”的标记，就进入初始化
   if (!(rootContainerElement: any)[listeningMarker]) {
+    // 给根容器打上已监听的标记，避免重复监听
     (rootContainerElement: any)[listeningMarker] = true;
+
+    // 遍历所有支持的原生事件，逐个调用 listenToNativeEvent() 进行监听
     allNativeEvents.forEach(domEventName => {
       // We handle selectionchange separately because it
       // doesn't bubble and needs to be on the document.
+      // 跳过 selectionchange，其他事件在这里处理
       if (domEventName !== 'selectionchange') {
+        // 对于非委托事件，只监听冒泡阶段
+        // 委托事件元素会将事件冒泡到父容器，这样父容器能统一处理所有事件
+        // 非委托元素则不会将事件冒泡到父容器，要单独处理
         if (!nonDelegatedEvents.has(domEventName)) {
+          // 既监听捕获阶段，也监听冒泡阶段
           listenToNativeEvent(domEventName, false, rootContainerElement);
         }
+        // 仅监听捕获阶段
         listenToNativeEvent(domEventName, true, rootContainerElement);
       }
     });
+    // 计算根容器所属的 document
     const ownerDocument =
       (rootContainerElement: any).nodeType === DOCUMENT_NODE
         ? rootContainerElement
         : (rootContainerElement: any).ownerDocument;
+    // 如果 document 不为 null，则监听它的 selectionchange 事件
     if (ownerDocument !== null) {
       // The selectionchange event also needs deduplication
       // but it is attached to the document.
+      // 所以要在 document 上打标记，避免重复监听
       if (!(ownerDocument: any)[listeningMarker]) {
         (ownerDocument: any)[listeningMarker] = true;
+        // 监听 document 的 selectionchange 事件
         listenToNativeEvent('selectionchange', false, ownerDocument);
       }
     }
