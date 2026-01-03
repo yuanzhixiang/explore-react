@@ -68,6 +68,20 @@ module.exports = {
           '../../../../build/node_modules/react-server/$1'
         ),
       },
+      {
+        find: /^scheduler\/(.*)$/,
+        replacement: path.resolve(
+          __dirname,
+          '../../../../build/node_modules/scheduler/$1'
+        ),
+      },
+      {
+        find: /^scheduler$/,
+        replacement: path.resolve(
+          __dirname,
+          '../../../../build/node_modules/scheduler/index.js'
+        ),
+      },
     ],
   },
   // Vite 预构建依赖会把包提前打进缓存，这会绕过你的 alias。把这些包排除，确保每次都走你指定的路径
@@ -81,6 +95,7 @@ module.exports = {
       'react-reconciler',
       'react-server',
       'shared',
+      'scheduler',
     ],
   },
   server: {

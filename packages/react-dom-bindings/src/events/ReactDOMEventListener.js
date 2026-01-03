@@ -1,0 +1,225 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow
+ */
+
+import type {EventPriority} from 'react-reconciler/src/ReactEventPriorities';
+import type {AnyNativeEvent} from '../events/PluginModuleType';
+import type {Fiber, FiberRoot} from 'react-reconciler/src/ReactInternalTypes';
+import type {
+  Container,
+  ActivityInstance,
+  SuspenseInstance,
+} from '../client/ReactFiberConfigDOM';
+import type {DOMEventName} from '../events/DOMEventNames';
+
+// import {
+//   isDiscreteEventThatRequiresHydration,
+//   clearIfContinuousEvent,
+//   queueIfContinuousEvent,
+// } from './ReactDOMEventReplaying';
+// import {attemptSynchronousHydration} from 'react-reconciler/src/ReactFiberReconciler';
+// import {
+//   getNearestMountedFiber,
+//   getContainerFromFiber,
+//   getActivityInstanceFromFiber,
+//   getSuspenseInstanceFromFiber,
+// } from 'react-reconciler/src/ReactFiberTreeReflection';
+import {
+  HostRoot,
+  ActivityComponent,
+  SuspenseComponent,
+} from 'react-reconciler/src/ReactWorkTags';
+import {type EventSystemFlags, IS_CAPTURE_PHASE} from './EventSystemFlags';
+
+// import getEventTarget from './getEventTarget';
+// import {
+//   getInstanceFromNode,
+//   getClosestInstanceFromNode,
+// } from '../client/ReactDOMComponentTree';
+
+// import {dispatchEventForPluginEventSystem} from './DOMPluginEventSystem';
+// import {
+//   getCurrentUpdatePriority,
+//   setCurrentUpdatePriority,
+// } from '../client/ReactDOMUpdatePriority';
+
+import {
+  getCurrentPriorityLevel as getCurrentSchedulerPriorityLevel,
+  IdlePriority as IdleSchedulerPriority,
+  ImmediatePriority as ImmediateSchedulerPriority,
+  LowPriority as LowSchedulerPriority,
+  NormalPriority as NormalSchedulerPriority,
+  UserBlockingPriority as UserBlockingSchedulerPriority,
+} from 'react-reconciler/src/Scheduler';
+import {
+  DiscreteEventPriority,
+  ContinuousEventPriority,
+  DefaultEventPriority,
+  IdleEventPriority,
+} from 'react-reconciler/src/ReactEventPriorities';
+// import ReactSharedInternals from 'shared/ReactSharedInternals';
+// import {isRootDehydrated} from 'react-reconciler/src/ReactFiberShellHydration';
+
+export function createEventListenerWrapperWithPriority(
+  targetContainer: EventTarget,
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+): Function {
+  const eventPriority = getEventPriority(domEventName);
+  let listenerWrapper;
+  switch (eventPriority) {
+    case DiscreteEventPriority:
+      listenerWrapper = dispatchDiscreteEvent;
+      break;
+    case ContinuousEventPriority:
+      listenerWrapper = dispatchContinuousEvent;
+      break;
+    case DefaultEventPriority:
+    default:
+      listenerWrapper = dispatchEvent;
+      break;
+  }
+  return listenerWrapper.bind(
+    null,
+    domEventName,
+    eventSystemFlags,
+    targetContainer,
+  );
+}
+
+function dispatchDiscreteEvent(
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+  container: EventTarget,
+  nativeEvent: AnyNativeEvent,
+) {
+  throw new Error('Not implemented');
+}
+
+function dispatchContinuousEvent(
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+  container: EventTarget,
+  nativeEvent: AnyNativeEvent,
+) {
+  throw new Error('Not implemented');
+}
+
+export function dispatchEvent(
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+  targetContainer: EventTarget,
+  nativeEvent: AnyNativeEvent,
+): void {
+  throw new Error('Not implemented');
+}
+
+export function getEventPriority(domEventName: DOMEventName): EventPriority {
+  switch (domEventName) {
+    // Used by SimpleEventPlugin:
+    case 'beforetoggle':
+    case 'cancel':
+    case 'click':
+    case 'close':
+    case 'contextmenu':
+    case 'copy':
+    case 'cut':
+    case 'auxclick':
+    case 'dblclick':
+    case 'dragend':
+    case 'dragstart':
+    case 'drop':
+    case 'focusin':
+    case 'focusout':
+    case 'input':
+    case 'invalid':
+    case 'keydown':
+    case 'keypress':
+    case 'keyup':
+    case 'mousedown':
+    case 'mouseup':
+    case 'paste':
+    case 'pause':
+    case 'play':
+    case 'pointercancel':
+    case 'pointerdown':
+    case 'pointerup':
+    case 'ratechange':
+    case 'reset':
+    case 'seeked':
+    case 'submit':
+    case 'toggle':
+    case 'touchcancel':
+    case 'touchend':
+    case 'touchstart':
+    case 'volumechange':
+    // Used by polyfills: (fall through)
+    case 'change':
+    case 'selectionchange':
+    case 'textInput':
+    case 'compositionstart':
+    case 'compositionend':
+    case 'compositionupdate':
+    // Only enableCreateEventHandleAPI: (fall through)
+    case 'beforeblur':
+    case 'afterblur':
+    // Not used by React but could be by user code: (fall through)
+    case 'beforeinput':
+    case 'blur':
+    case 'fullscreenchange':
+    case 'focus':
+    case 'hashchange':
+    case 'popstate':
+    case 'select':
+    case 'selectstart':
+      return DiscreteEventPriority;
+    case 'drag':
+    case 'dragenter':
+    case 'dragexit':
+    case 'dragleave':
+    case 'dragover':
+    case 'mousemove':
+    case 'mouseout':
+    case 'mouseover':
+    case 'pointermove':
+    case 'pointerout':
+    case 'pointerover':
+    case 'resize':
+    case 'scroll':
+    case 'touchmove':
+    case 'wheel':
+    // Not used by React but could be by user code: (fall through)
+    case 'mouseenter':
+    case 'mouseleave':
+    case 'pointerenter':
+    case 'pointerleave':
+      return ContinuousEventPriority;
+    case 'message': {
+      // We might be in the Scheduler callback.
+      // Eventually this mechanism will be replaced by a check
+      // of the current priority on the native scheduler.
+      const schedulerPriority = getCurrentSchedulerPriorityLevel();
+      switch (schedulerPriority) {
+        case ImmediateSchedulerPriority:
+          return DiscreteEventPriority;
+        case UserBlockingSchedulerPriority:
+          return ContinuousEventPriority;
+        case NormalSchedulerPriority:
+        case LowSchedulerPriority:
+          // TODO: Handle LowSchedulerPriority, somehow. Maybe the same lane as hydration.
+          return DefaultEventPriority;
+        case IdleSchedulerPriority:
+          return IdleEventPriority;
+        default:
+          return DefaultEventPriority;
+      }
+    }
+    default:
+      return DefaultEventPriority;
+  }
+}

@@ -8,7 +8,7 @@
  */
 
 import type {DOMEventName} from './DOMEventNames';
-// import type {EventSystemFlags} from './EventSystemFlags';
+import type {EventSystemFlags} from './EventSystemFlags';
 // import type {AnyNativeEvent} from './PluginModuleType';
 import type {
   KnownReactSyntheticEvent,
@@ -56,7 +56,7 @@ import {
   disableCommentsAsDOMContainers,
   enableScrollEndPolyfill,
 } from 'shared/ReactFeatureFlags';
-// import {createEventListenerWrapperWithPriority} from './ReactDOMEventListener';
+import {createEventListenerWrapperWithPriority} from './ReactDOMEventListener';
 // import {
 //   removeEventListener,
 //   addEventCaptureListener,
@@ -147,10 +147,14 @@ export const nonDelegatedEvents: Set<DOMEventName> = new Set([
 ]);
 
 export function listenToNativeEvent(
+  // 原生事件名
   domEventName: DOMEventName,
+  // 是否是捕获阶段监听器
   isCapturePhaseListener: boolean,
+  // 要绑定事件的目标对象
   target: EventTarget,
 ): void {
+  // 开发环境下的额外警告
   if (__DEV__) {
     if (nonDelegatedEvents.has(domEventName) && !isCapturePhaseListener) {
       console.error(
@@ -161,10 +165,14 @@ export function listenToNativeEvent(
     }
   }
 
+  // 初始化事件系统标志位为 0
   let eventSystemFlags = 0;
+  // 如果是捕获阶段监听器
   if (isCapturePhaseListener) {
+    // 把 IS_CAPTURE_PHASE 标志位加进去
     eventSystemFlags |= IS_CAPTURE_PHASE;
   }
+  // 调用底层函数真正注册事件监听器
   addTrappedEventListener(
     target,
     domEventName,
@@ -216,4 +224,20 @@ export function listenToAllSupportedEvents(rootContainerElement: EventTarget) {
       }
     }
   }
+}
+
+function addTrappedEventListener(
+  targetContainer: EventTarget,
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+  isCapturePhaseListener: boolean,
+  isDeferredListenerForLegacyFBSupport?: boolean,
+) {
+  let listener = createEventListenerWrapperWithPriority(
+    targetContainer,
+    domEventName,
+    eventSystemFlags,
+  );
+
+  throw new Error('Not implemented: addTrappedEventListener');
 }

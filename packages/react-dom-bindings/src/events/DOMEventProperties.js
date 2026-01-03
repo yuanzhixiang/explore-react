@@ -9,16 +9,16 @@
 
 import type {DOMEventName} from './DOMEventNames';
 
-// import {registerTwoPhaseEvent} from './EventRegistry';
-// import {
-//   ANIMATION_END,
-//   ANIMATION_ITERATION,
-//   ANIMATION_START,
-//   TRANSITION_RUN,
-//   TRANSITION_START,
-//   TRANSITION_CANCEL,
-//   TRANSITION_END,
-// } from './DOMEventNames';
+import {registerTwoPhaseEvent} from './EventRegistry';
+import {
+  ANIMATION_END,
+  ANIMATION_ITERATION,
+  ANIMATION_START,
+  TRANSITION_RUN,
+  TRANSITION_START,
+  TRANSITION_CANCEL,
+  TRANSITION_END,
+} from './DOMEventNames';
 
 import {
   enableCreateEventHandleAPI,
@@ -120,6 +120,28 @@ if (enableCreateEventHandleAPI) {
   topLevelEventsToReactNames.set('afterblur', null);
 }
 
+function registerSimpleEvent(domEventName: DOMEventName, reactName: string) {
+  topLevelEventsToReactNames.set(domEventName, reactName);
+  registerTwoPhaseEvent(reactName, [domEventName]);
+}
+
 export function registerSimpleEvents() {
-  throw new Error('Not implemented: registerSimpleEvents');
+  for (let i = 0; i < simpleEventPluginEvents.length; i++) {
+    const eventName = ((simpleEventPluginEvents[i]: any): string);
+    const domEventName = ((eventName.toLowerCase(): any): DOMEventName);
+    const capitalizedEvent = eventName[0].toUpperCase() + eventName.slice(1);
+    registerSimpleEvent(domEventName, 'on' + capitalizedEvent);
+  }
+  // Special cases where event names don't match.
+  registerSimpleEvent(ANIMATION_END, 'onAnimationEnd');
+  registerSimpleEvent(ANIMATION_ITERATION, 'onAnimationIteration');
+  registerSimpleEvent(ANIMATION_START, 'onAnimationStart');
+  registerSimpleEvent('dblclick', 'onDoubleClick');
+  registerSimpleEvent('focusin', 'onFocus');
+  registerSimpleEvent('focusout', 'onBlur');
+
+  registerSimpleEvent(TRANSITION_RUN, 'onTransitionRun');
+  registerSimpleEvent(TRANSITION_START, 'onTransitionStart');
+  registerSimpleEvent(TRANSITION_CANCEL, 'onTransitionCancel');
+  registerSimpleEvent(TRANSITION_END, 'onTransitionEnd');
 }

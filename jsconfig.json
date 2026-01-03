@@ -3,6 +3,7 @@
     "baseUrl": ".",
     "paths": {
       "shared/*": ["packages/shared/*"],
+      "scheduler/*": ["packages/scheduler/*"],
       "react-dom/*": ["packages/react-dom/*"],
       "react/*": ["packages/react/*"],
       "react-reconciler/*": ["packages/react-reconciler/*"],

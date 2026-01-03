@@ -299,6 +299,9 @@ module.name_mapper='^react-dom/\(.*\)$' -> '<PROJECT_ROOT>/packages/react-dom/\1
 module.name_mapper='^react-client/\(.*\)$' -> '<PROJECT_ROOT>/packages/react-client/\1'
 module.name_mapper='^react-dom-bindings/\(.*\)$' -> '<PROJECT_ROOT>/packages/react-dom-bindings/\1'
 module.name_mapper='^react-server/\(.*\)$' -> '<PROJECT_ROOT>/packages/react-server/\1'
+module.name_mapper='^scheduler/\(.*\)$' -> '<PROJECT_ROOT>/packages/scheduler/\1'
+module.name_mapper='^scheduler$' -> '<PROJECT_ROOT>/packages/scheduler/index.js'
+
 
 
 [version]
