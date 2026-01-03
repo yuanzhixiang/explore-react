@@ -34,6 +34,14 @@ module.exports = {
         ),
       },
       {
+        find: /^react\/(.*)$/,
+        replacement: path.resolve(
+          __dirname,
+          '../../../../build/node_modules/react/$1'
+        ),
+      },
+
+      {
         find: /^shared\/(.+)$/,
         replacement: path.resolve(
           __dirname,

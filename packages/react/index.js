@@ -22,7 +22,7 @@ export type ElementRef<C> = React$ElementRef<C>;
 export type ChildrenArray<+T> = $ReadOnlyArray<ChildrenArray<T>> | T;
 
 export {
-  // __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE,
+  __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE,
   // __COMPILER_RUNTIME,
   // Children,
   // Component,
@@ -71,4 +71,4 @@ export {
   // useTransition,
   // useActionState,
   // version,
-} from "./src/ReactClient";
+} from './src/ReactClient';

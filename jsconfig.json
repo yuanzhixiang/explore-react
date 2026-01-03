@@ -6,6 +6,7 @@
       "scheduler/*": ["packages/scheduler/*"],
       "react-dom/*": ["packages/react-dom/*"],
       "react/*": ["packages/react/*"],
+      "react": ["packages/react/index.js"],
       "react-reconciler/*": ["packages/react-reconciler/*"],
       "react-client/*": ["packages/react-client/*"],
       "react-dom-bindings/*": ["packages/react-dom-bindings/*"],
