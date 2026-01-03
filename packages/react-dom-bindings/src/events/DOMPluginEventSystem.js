@@ -66,7 +66,7 @@ import {
 // } from './EventListener';
 // import * as BeforeInputEventPlugin from './plugins/BeforeInputEventPlugin';
 // import * as ChangeEventPlugin from './plugins/ChangeEventPlugin';
-// import * as EnterLeaveEventPlugin from './plugins/EnterLeaveEventPlugin';
+import * as EnterLeaveEventPlugin from './plugins/EnterLeaveEventPlugin';
 // import * as SelectEventPlugin from './plugins/SelectEventPlugin';
 import * as SimpleEventPlugin from './plugins/SimpleEventPlugin';
 // import * as FormActionEventPlugin from './plugins/FormActionEventPlugin';
