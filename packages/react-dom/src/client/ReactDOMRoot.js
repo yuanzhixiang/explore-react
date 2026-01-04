@@ -93,7 +93,7 @@ import {COMMENT_NODE} from 'react-dom-bindings/src/client/HTMLNodeType';
 import {
   createContainer,
   // createHydrationContainer,
-  // updateContainer,
+  updateContainer,
   // updateContainerSync,
   // flushSyncWork,
   // isAlreadyRendering,
@@ -113,7 +113,32 @@ function ReactDOMRoot(internalRoot: FiberRoot) {
 ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
   // $FlowFixMe[missing-this-annot]
   function (children: ReactNodeList): void {
-    throw new Error('Not implemented');
+    const root = this._internalRoot;
+    if (root === null) {
+      throw new Error('Cannot update an unmounted root.');
+    }
+
+    if (__DEV__) {
+      // using a reference to `arguments` bails out of GCC optimizations which affect function arity
+      const args = arguments;
+      if (typeof args[1] === 'function') {
+        console.error(
+          'does not support the second callback argument. ' +
+            'To execute a side effect after rendering, declare it in a component body with useEffect().',
+        );
+      } else if (isValidContainer(args[1])) {
+        console.error(
+          'You passed a container to the second argument of root.render(...). ' +
+            "You don't need to pass it again since you already passed it to create the root.",
+        );
+      } else if (typeof args[1] !== 'undefined') {
+        console.error(
+          'You passed a second argument to root.render(...) but it only accepts ' +
+            'one argument.',
+        );
+      }
+    }
+    updateContainer(children, root, null, null);
   };
 
 // $FlowFixMe[prop-missing] found when upgrading Flow

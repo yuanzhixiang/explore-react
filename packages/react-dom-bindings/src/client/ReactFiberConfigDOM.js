@@ -27,6 +27,126 @@ import type {
 } from 'react-dom/src/shared/ReactDOMTypes';
 import type {TransitionTypes} from 'react/src/ReactTransitionType';
 
+// import {NotPending} from '../shared/ReactDOMFormActions';
+
+// import {setSrcObject} from './ReactDOMSrcObject';
+
+// import {getCurrentRootHostContainer} from 'react-reconciler/src/ReactFiberHostContext';
+// import {runWithFiberInDEV} from 'react-reconciler/src/ReactCurrentFiber';
+
+// import hasOwnProperty from 'shared/hasOwnProperty';
+// import {checkAttributeStringCoercion} from 'shared/CheckStringCoercion';
+import {REACT_CONTEXT_TYPE} from 'shared/ReactSymbols';
+
+export {
+  // setCurrentUpdatePriority,
+  // getCurrentUpdatePriority,
+  resolveUpdatePriority,
+} from './ReactDOMUpdatePriority';
+import {
+  // precacheFiberNode,
+  // updateFiberProps,
+  // getFiberCurrentPropsFromNode,
+  // getInstanceFromNode,
+  // getClosestInstanceFromNode,
+  // getFiberFromScopeInstance,
+  // getInstanceFromNode as getInstanceFromNodeDOMTree,
+  isContainerMarkedAsRoot,
+  // detachDeletedInstance,
+  // getResourcesFromRoot,
+  // isMarkedHoistable,
+  // markNodeAsHoistable,
+  // isOwnedInstance,
+} from './ReactDOMComponentTree';
+// import {
+//   traverseFragmentInstance,
+//   getFragmentParentHostFiber,
+//   getInstanceFromHostFiber,
+//   isFiberFollowing,
+//   isFiberPreceding,
+//   getFragmentInstanceSiblings,
+//   traverseFragmentInstanceDeeply,
+//   fiberIsPortaledIntoHost,
+//   isFiberContainedByFragment,
+//   isFragmentContainedByFiber,
+// } from 'react-reconciler/src/ReactFiberTreeReflection';
+// import {compareDocumentPositionForEmptyFragment} from 'shared/ReactDOMFragmentRefShared';
+
+// export {detachDeletedInstance};
+// import {hasRole} from './DOMAccessibilityRoles';
+// import {
+//   setInitialProperties,
+//   updateProperties,
+//   hydrateProperties,
+//   hydrateText,
+//   diffHydratedProperties,
+//   getPropsFromElement,
+//   diffHydratedText,
+//   trapClickOnNonInteractiveElement,
+// } from './ReactDOMComponent';
+// import {hydrateInput} from './ReactDOMInput';
+// import {hydrateTextarea} from './ReactDOMTextarea';
+// import {hydrateSelect} from './ReactDOMSelect';
+// import {getSelectionInformation, restoreSelection} from './ReactInputSelection';
+// import setTextContent from './setTextContent';
+// import {
+//   validateDOMNesting,
+//   validateTextNesting,
+//   updatedAncestorInfoDev,
+// } from './validateDOMNesting';
+// import {
+//   isEnabled as ReactBrowserEventEmitterIsEnabled,
+//   setEnabled as ReactBrowserEventEmitterSetEnabled,
+// } from '../events/ReactDOMEventListener';
+// import {SVG_NAMESPACE, MATH_NAMESPACE} from './DOMNamespaces';
+import {
+  ELEMENT_NODE,
+  TEXT_NODE,
+  COMMENT_NODE,
+  DOCUMENT_NODE,
+  DOCUMENT_TYPE_NODE,
+  DOCUMENT_FRAGMENT_NODE,
+} from './HTMLNodeType';
+
+// import {
+//   flushEventReplaying,
+//   retryIfBlockedOn,
+// } from '../events/ReactDOMEventReplaying';
+
+import {
+  enableCreateEventHandleAPI,
+  enableScopeAPI,
+  enableTrustedTypesIntegration,
+  disableLegacyMode,
+  enableMoveBefore,
+  disableCommentsAsDOMContainers,
+  enableSuspenseyImages,
+  enableSrcObject,
+  enableViewTransition,
+  enableHydrationChangeEvent,
+  enableFragmentRefsScrollIntoView,
+  enableProfilerTimer,
+  enableFragmentRefsInstanceHandles,
+} from 'shared/ReactFeatureFlags';
+import {
+  HostComponent,
+  HostHoistable,
+  HostText,
+  HostSingleton,
+} from 'react-reconciler/src/ReactWorkTags';
+import {listenToAllSupportedEvents} from '../events/DOMPluginEventSystem';
+// import {validateLinkPropsForStyleResource} from '../shared/ReactDOMResourceValidation';
+// import escapeSelectorAttributeValueInsideDoubleQuotes from './escapeSelectorAttributeValueInsideDoubleQuotes';
+// import {flushSyncWork as flushSyncWorkOnAllRoots} from 'react-reconciler/src/ReactFiberWorkLoop';
+// import {requestFormReset as requestFormResetOnFiber} from 'react-reconciler/src/ReactFiberHooks';
+
+// import ReactDOMSharedInternals from 'shared/ReactDOMSharedInternals';
+
+export {default as rendererVersion} from 'shared/ReactVersion';
+
+import noop from 'shared/noop';
+// import estimateBandwidth from './estimateBandwidth';
+
 export const rendererPackageName = 'react-dom';
 export const extraDevToolsConfig = null;
 

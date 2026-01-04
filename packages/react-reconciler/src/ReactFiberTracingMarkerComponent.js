@@ -11,12 +11,27 @@ import type {
   TransitionTracingCallbacks,
   Fiber,
   FiberRoot,
-} from "./ReactInternalTypes";
-import type { Transition } from "react/src/ReactStartTransition";
-import type { OffscreenInstance } from "./ReactFiberOffscreenComponent";
-import type { StackCursor } from "./ReactFiberStack";
+} from './ReactInternalTypes';
+import type {Transition} from 'react/src/ReactStartTransition';
+import type {OffscreenInstance} from './ReactFiberOffscreenComponent';
+import type {StackCursor} from './ReactFiberStack';
 
-export type SuspenseInfo = { name: string | null };
+export type SuspenseInfo = {name: string | null};
+
+export type PendingTransitionCallbacks = {
+  transitionStart: Array<Transition> | null,
+  transitionProgress: Map<Transition, PendingBoundaries> | null,
+  transitionComplete: Array<Transition> | null,
+  markerProgress: Map<
+    string,
+    {pendingBoundaries: PendingBoundaries, transitions: Set<Transition>},
+  > | null,
+  markerIncomplete: Map<
+    string,
+    {aborts: Array<TransitionAbort>, transitions: Set<Transition>},
+  > | null,
+  markerComplete: Map<string, Set<Transition>> | null,
+};
 
 // TODO: Is there a way to not include the tag or name here?
 export type TracingMarkerInstance = {
@@ -28,7 +43,7 @@ export type TracingMarkerInstance = {
 };
 
 export type TransitionAbort = {
-  reason: "error" | "unknown" | "marker" | "suspense",
+  reason: 'error' | 'unknown' | 'marker' | 'suspense',
   name?: string | null,
 };
 

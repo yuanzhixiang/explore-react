@@ -26,3 +26,7 @@ export const DiscreteEventPriority: EventPriority = SyncLane;
 export const ContinuousEventPriority: EventPriority = InputContinuousLane;
 export const DefaultEventPriority: EventPriority = DefaultLane;
 export const IdleEventPriority: EventPriority = IdleLane;
+
+export function eventPriorityToLane(updatePriority: EventPriority): Lane {
+  return updatePriority;
+}
