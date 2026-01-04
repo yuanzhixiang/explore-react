@@ -14,5 +14,5 @@
   "javascript.preferGoToSourceDefinition": true,
   "typescript.preferGoToSourceDefinition": true,
   // 指定 prettier 的路径为项目本地安装的版本，确保使用一致的格式化规则
-  "prettier.prettierPath": "./node_modules/prettier"
+  "prettier.prettierPath": "./node_modules/prettier",
 }

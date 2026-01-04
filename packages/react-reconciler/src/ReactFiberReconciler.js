@@ -38,7 +38,7 @@ import {
   SuspenseComponent,
   ActivityComponent,
 } from './ReactWorkTags';
-// import getComponentNameFromFiber from 'react-reconciler/src/getComponentNameFromFiber';
+import getComponentNameFromFiber from 'react-reconciler/src/getComponentNameFromFiber';
 // import isArray from 'shared/isArray';
 import {
   enableSchedulingProfiler,
@@ -52,20 +52,20 @@ import {
   rendererPackageName,
   extraDevToolsConfig,
 } from './ReactFiberConfig';
-// import {
-//   findCurrentUnmaskedContext,
-//   processChildContext,
-//   emptyContextObject,
-//   isContextProvider as isLegacyContextProvider,
-// } from './ReactFiberLegacyContext';
+import {
+  // findCurrentUnmaskedContext,
+  // processChildContext,
+  emptyContextObject,
+  // isContextProvider as isLegacyContextProvider,
+} from './ReactFiberLegacyContext';
 import {createFiberRoot} from './ReactFiberRoot';
 // import {isRootDehydrated} from './ReactFiberShellHydration';
-// import {
-//   injectInternals,
-//   markRenderScheduled,
-//   onScheduleRoot,
-//   injectProfilingHooks,
-// } from './ReactFiberDevToolsHook';
+import {
+  // injectInternals,
+  markRenderScheduled,
+  onScheduleRoot,
+  // injectProfilingHooks,
+} from './ReactFiberDevToolsHook';
 // import {startUpdateTimerByLane} from './ReactProfilerTimer';
 import {
   requestUpdateLane,
@@ -81,16 +81,16 @@ import {
   // flushPendingEffects,
 } from './ReactFiberWorkLoop';
 // import {enqueueConcurrentRenderForLane} from './ReactFiberConcurrentUpdates';
-// import {
-//   createUpdate,
-//   enqueueUpdate,
-//   entangleTransitions,
-// } from './ReactFiberClassUpdateQueue';
-// import {
-//   isRendering as ReactCurrentFiberIsRendering,
-//   current as ReactCurrentFiberCurrent,
-//   runWithFiberInDEV,
-// } from './ReactCurrentFiber';
+import {
+  createUpdate,
+  enqueueUpdate,
+  // entangleTransitions,
+} from './ReactFiberClassUpdateQueue';
+import {
+  isRendering as ReactCurrentFiberIsRendering,
+  current as ReactCurrentFiberCurrent,
+  runWithFiberInDEV,
+} from './ReactCurrentFiber';
 import {StrictLegacyMode} from './ReactTypeOfMode';
 import {
   SyncLane,
@@ -129,6 +129,23 @@ export {
 import {registerDefaultIndicator} from './ReactFiberAsyncAction';
 
 type OpaqueRoot = FiberRoot;
+
+let didWarnAboutNestedUpdates;
+let didWarnAboutFindNodeInStrictMode;
+
+if (__DEV__) {
+  didWarnAboutNestedUpdates = false;
+  didWarnAboutFindNodeInStrictMode = ({}: {[string]: boolean});
+}
+
+function getContextForSubtree(
+  parentComponent: ?component(...props: any),
+): Object {
+  if (!parentComponent) {
+    return emptyContextObject;
+  }
+  throw new Error('Not implemented yet.');
+}
 
 export function createContainer(
   containerInfo: Container,
@@ -204,5 +221,57 @@ function updateContainerImpl(
   parentComponent: ?component(...props: any),
   callback: ?Function,
 ): void {
+  if (__DEV__) {
+    onScheduleRoot(container, element);
+  }
+
+  if (enableSchedulingProfiler) {
+    markRenderScheduled(lane);
+  }
+
+  const context = getContextForSubtree(parentComponent);
+  if (container.context === null) {
+    container.context = context;
+  } else {
+    container.pendingContext = context;
+  }
+
+  if (__DEV__) {
+    if (
+      ReactCurrentFiberIsRendering &&
+      ReactCurrentFiberCurrent !== null &&
+      !didWarnAboutNestedUpdates
+    ) {
+      didWarnAboutNestedUpdates = true;
+      console.error(
+        'Render methods should be a pure function of props and state; ' +
+          'triggering nested component updates from render is not allowed. ' +
+          'If necessary, trigger nested updates in componentDidUpdate.\n\n' +
+          'Check the render method of %s.',
+        getComponentNameFromFiber(ReactCurrentFiberCurrent) || 'Unknown',
+      );
+    }
+  }
+
+  const update = createUpdate(lane);
+  // Caution: React DevTools currently depends on this property
+  // being called "element".
+  update.payload = {element};
+
+  callback = callback === undefined ? null : callback;
+  if (callback !== null) {
+    if (__DEV__) {
+      if (typeof callback !== 'function') {
+        console.error(
+          'Expected the last optional `callback` argument to be a ' +
+            'function. Instead received: %s.',
+          callback,
+        );
+      }
+    }
+    update.callback = callback;
+  }
+
+  const root = enqueueUpdate(rootFiber, update, lane);
   throw new Error('Not implemented yet.');
 }

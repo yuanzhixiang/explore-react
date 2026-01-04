@@ -152,6 +152,11 @@ export type UpdateQueue<State> = {
   callbacks: Array<() => mixed> | null,
 };
 
+export const UpdateState = 0;
+export const ReplaceState = 1;
+export const ForceUpdate = 2;
+export const CaptureUpdate = 3;
+
 export function initializeUpdateQueue<State>(fiber: Fiber): void {
   const queue: UpdateQueue<State> = {
     // memoizedState 是该 Fiber 上一次完成渲染后的状态快照
@@ -167,4 +172,25 @@ export function initializeUpdateQueue<State>(fiber: Fiber): void {
   };
   // updateQueue 就是这个 Fiber 的待处理更新队列
   fiber.updateQueue = queue;
+}
+
+export function createUpdate(lane: Lane): Update<mixed> {
+  const update: Update<mixed> = {
+    lane,
+
+    tag: UpdateState,
+    payload: null,
+    callback: null,
+
+    next: null,
+  };
+  return update;
+}
+
+export function enqueueUpdate<State>(
+  fiber: Fiber,
+  update: Update<State>,
+  lane: Lane,
+): FiberRoot | null {
+  throw new Error('Not implemented');
 }

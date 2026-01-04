@@ -46,3 +46,32 @@ let hasLoggedError = false;
 
 export const isDevToolsPresent =
   typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined';
+
+export function onScheduleRoot(root: FiberRoot, children: ReactNodeList) {
+  if (__DEV__) {
+    if (
+      injectedHook &&
+      typeof injectedHook.onScheduleFiberRoot === 'function'
+    ) {
+      try {
+        injectedHook.onScheduleFiberRoot(rendererID, root, children);
+      } catch (err) {
+        if (__DEV__ && !hasLoggedError) {
+          hasLoggedError = true;
+          console.error('React instrumentation encountered an error: %o', err);
+        }
+      }
+    }
+  }
+}
+
+export function markRenderScheduled(lane: Lane): void {
+  if (enableSchedulingProfiler) {
+    if (
+      injectedProfilingHooks !== null &&
+      typeof injectedProfilingHooks.markRenderScheduled === 'function'
+    ) {
+      injectedProfilingHooks.markRenderScheduled(lane);
+    }
+  }
+}
