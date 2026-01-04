@@ -5,7 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import getComponentNameFromType from 'shared/getComponentNameFromType';
 import ReactSharedInternals from 'shared/ReactSharedInternals';
+// import hasOwnProperty from 'shared/hasOwnProperty';
+// import assign from 'shared/assign';
+import {
+  REACT_ELEMENT_TYPE,
+  REACT_FRAGMENT_TYPE,
+  REACT_LAZY_TYPE,
+  // REACT_OPTIMISTIC_KEY,
+} from 'shared/ReactSymbols';
+// import {checkKeyStringCoercion} from 'shared/CheckStringCoercion';
+// import isArray from 'shared/isArray';
 import {ownerStackLimit, enableOptimisticKey} from 'shared/ReactFeatureFlags';
 
 const createTask =
@@ -17,13 +28,32 @@ const createTask =
       console.createTask
     : () => null;
 
+let didWarnAboutElementRef;
 let unknownOwnerDebugTask;
 if (__DEV__) {
+  didWarnAboutElementRef = {};
   unknownOwnerDebugTask = createTask(getTaskName(UnknownOwner));
 }
 
 function getTaskName(type) {
-  throw new Error('Not implemented: getTaskName');
+  if (type === REACT_FRAGMENT_TYPE) {
+    return '<>';
+  }
+  if (
+    typeof type === 'object' &&
+    type !== null &&
+    type.$$typeof === REACT_LAZY_TYPE
+  ) {
+    // We don't want to eagerly initialize the initializer in DEV mode so we can't
+    // call it to extract the type so we don't know the type of this component.
+    return '<...>';
+  }
+  try {
+    const name = getComponentNameFromType(type);
+    return name ? '<' + name + '>' : '<...>';
+  } catch (x) {
+    return '<...>';
+  }
 }
 
 function getOwner() {
@@ -147,6 +177,140 @@ export function createElement(type, config, children) {
         ? createTask(getTaskName(type))
         : unknownOwnerDebugTask),
   );
+}
+
+function ReactElement(type, key, props, owner, debugStack, debugTask) {
+  // Ignore whatever was passed as the ref argument and treat `props.ref` as
+  // the source of truth. The only thing we use this for is `element.ref`,
+  // which will log a deprecation warning on access. In the next release, we
+  // can remove `element.ref` as well as the `ref` argument.
+  const refProp = props.ref;
+
+  // An undefined `element.ref` is coerced to `null` for
+  // backwards compatibility.
+  const ref = refProp !== undefined ? refProp : null;
+
+  let element;
+  if (__DEV__) {
+    // In dev, make `ref` a non-enumerable property with a warning. It's non-
+    // enumerable so that test matchers and serializers don't access it and
+    // trigger the warning.
+    //
+    // `ref` will be removed from the element completely in a future release.
+    element = {
+      // This tag allows us to uniquely identify this as a React Element
+      $$typeof: REACT_ELEMENT_TYPE,
+
+      // Built-in properties that belong on the element
+      type,
+      key,
+
+      props,
+
+      // Record the component responsible for creating this element.
+      _owner: owner,
+    };
+    if (ref !== null) {
+      Object.defineProperty(element, 'ref', {
+        enumerable: false,
+        get: elementRefGetterWithDeprecationWarning,
+      });
+    } else {
+      // Don't warn on access if a ref is not given. This reduces false
+      // positives in cases where a test serializer uses
+      // getOwnPropertyDescriptors to compare objects, like Jest does, which is
+      // a problem because it bypasses non-enumerability.
+      //
+      // So unfortunately this will trigger a false positive warning in Jest
+      // when the diff is printed:
+      //
+      //   expect(<div ref={ref} />).toEqual(<span ref={ref} />);
+      //
+      // A bit sketchy, but this is what we've done for the `props.key` and
+      // `props.ref` accessors for years, which implies it will be good enough
+      // for `element.ref`, too. Let's see if anyone complains.
+      Object.defineProperty(element, 'ref', {
+        enumerable: false,
+        value: null,
+      });
+    }
+  } else {
+    // In prod, `ref` is a regular property and _owner doesn't exist.
+    element = {
+      // This tag allows us to uniquely identify this as a React Element
+      $$typeof: REACT_ELEMENT_TYPE,
+
+      // Built-in properties that belong on the element
+      type,
+      key,
+      ref,
+
+      props,
+    };
+  }
+
+  if (__DEV__) {
+    // The validation flag is currently mutative. We put it on
+    // an external backing store so that we can freeze the whole object.
+    // This can be replaced with a WeakMap once they are implemented in
+    // commonly used development environments.
+    element._store = {};
+
+    // To make comparing ReactElements easier for testing purposes, we make
+    // the validation flag non-enumerable (where possible, which should
+    // include every environment we run tests in), so the test framework
+    // ignores it.
+    Object.defineProperty(element._store, 'validated', {
+      configurable: false,
+      enumerable: false,
+      writable: true,
+      value: 0,
+    });
+    // debugInfo contains Server Component debug information.
+    Object.defineProperty(element, '_debugInfo', {
+      configurable: false,
+      enumerable: false,
+      writable: true,
+      value: null,
+    });
+    Object.defineProperty(element, '_debugStack', {
+      configurable: false,
+      enumerable: false,
+      writable: true,
+      value: debugStack,
+    });
+    Object.defineProperty(element, '_debugTask', {
+      configurable: false,
+      enumerable: false,
+      writable: true,
+      value: debugTask,
+    });
+    if (Object.freeze) {
+      Object.freeze(element.props);
+      Object.freeze(element);
+    }
+  }
+
+  return element;
+}
+
+function elementRefGetterWithDeprecationWarning() {
+  if (__DEV__) {
+    const componentName = getComponentNameFromType(this.type);
+    if (!didWarnAboutElementRef[componentName]) {
+      didWarnAboutElementRef[componentName] = true;
+      console.error(
+        'Accessing element.ref was removed in React 19. ref is now a ' +
+          'regular prop. It will be removed from the JSX Element ' +
+          'type in a future release.',
+      );
+    }
+
+    // An undefined `element.ref` is coerced to `null` for
+    // backwards compatibility.
+    const refProp = this.props.ref;
+    return refProp !== undefined ? refProp : null;
+  }
 }
 
 /**

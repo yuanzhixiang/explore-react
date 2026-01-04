@@ -1,0 +1,87 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow
+ */
+import type {LazyComponent} from 'react/src/ReactLazy';
+import type {ReactContext, ReactConsumerType} from 'shared/ReactTypes';
+
+import {
+  REACT_CONTEXT_TYPE,
+  REACT_CONSUMER_TYPE,
+  REACT_FORWARD_REF_TYPE,
+  REACT_FRAGMENT_TYPE,
+  REACT_PORTAL_TYPE,
+  REACT_MEMO_TYPE,
+  REACT_PROFILER_TYPE,
+  REACT_STRICT_MODE_TYPE,
+  REACT_SUSPENSE_TYPE,
+  REACT_SUSPENSE_LIST_TYPE,
+  REACT_LAZY_TYPE,
+  REACT_TRACING_MARKER_TYPE,
+  REACT_VIEW_TRANSITION_TYPE,
+  REACT_ACTIVITY_TYPE,
+} from 'shared/ReactSymbols';
+
+import {
+  enableTransitionTracing,
+  enableViewTransition,
+} from './ReactFeatureFlags';
+
+const REACT_CLIENT_REFERENCE = Symbol.for('react.client.reference');
+
+// Note that the reconciler package should generally prefer to use getComponentNameFromFiber() instead.
+export default function getComponentNameFromType(type: mixed): string | null {
+  if (type == null) {
+    // Host root, text node or just invalid type.
+    return null;
+  }
+  if (typeof type === 'function') {
+    if ((type: any).$$typeof === REACT_CLIENT_REFERENCE) {
+      // TODO: Create a convention for naming client references with debug info.
+      return null;
+    }
+    return (type: any).displayName || type.name || null;
+  }
+  if (typeof type === 'string') {
+    return type;
+  }
+  switch (type) {
+    case REACT_FRAGMENT_TYPE:
+      return 'Fragment';
+    case REACT_PROFILER_TYPE:
+      return 'Profiler';
+    case REACT_STRICT_MODE_TYPE:
+      return 'StrictMode';
+    case REACT_SUSPENSE_TYPE:
+      return 'Suspense';
+    case REACT_SUSPENSE_LIST_TYPE:
+      return 'SuspenseList';
+    case REACT_ACTIVITY_TYPE:
+      return 'Activity';
+    case REACT_VIEW_TRANSITION_TYPE:
+      if (enableViewTransition) {
+        return 'ViewTransition';
+      }
+    // Fall through
+    case REACT_TRACING_MARKER_TYPE:
+      if (enableTransitionTracing) {
+        return 'TracingMarker';
+      }
+  }
+  if (typeof type === 'object') {
+    if (__DEV__) {
+      if (typeof (type: any).tag === 'number') {
+        console.error(
+          'Received an unexpected object in getComponentNameFromType(). ' +
+            'This is likely a bug in React. Please file an issue.',
+        );
+      }
+    }
+    throw new Error('Not implemented: getComponentNameFromType for objects');
+  }
+  return null;
+}

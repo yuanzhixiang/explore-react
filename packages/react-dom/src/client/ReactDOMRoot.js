@@ -109,6 +109,20 @@ function ReactDOMRoot(internalRoot: FiberRoot) {
   this._internalRoot = internalRoot;
 }
 
+// $FlowFixMe[prop-missing] found when upgrading Flow
+ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
+  // $FlowFixMe[missing-this-annot]
+  function (children: ReactNodeList): void {
+    throw new Error('Not implemented');
+  };
+
+// $FlowFixMe[prop-missing] found when upgrading Flow
+ReactDOMHydrationRoot.prototype.unmount = ReactDOMRoot.prototype.unmount =
+  // $FlowFixMe[missing-this-annot]
+  function (): void {
+    throw new Error('Not implemented');
+  };
+
 export function createRoot(
   container: Element | Document | DocumentFragment,
   options?: CreateRootOptions,
@@ -193,4 +207,9 @@ function warnIfReactDOMContainerInDEV(container: any) {
       }
     }
   }
+}
+
+// $FlowFixMe[missing-this-annot]
+function ReactDOMHydrationRoot(internalRoot: FiberRoot) {
+  this._internalRoot = internalRoot;
 }
