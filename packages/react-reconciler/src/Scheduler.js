@@ -17,7 +17,7 @@ import * as Scheduler from 'scheduler';
 // export const cancelCallback = Scheduler.unstable_cancelCallback;
 // export const shouldYield = Scheduler.unstable_shouldYield;
 // export const requestPaint = Scheduler.unstable_requestPaint;
-// export const now = Scheduler.unstable_now;
+export const now = Scheduler.unstable_now;
 export const getCurrentPriorityLevel =
   Scheduler.unstable_getCurrentPriorityLevel;
 export const ImmediatePriority = Scheduler.unstable_ImmediatePriority;

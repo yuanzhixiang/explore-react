@@ -92,11 +92,11 @@ import {
   NoLanes,
   OffscreenLane,
   // isSubsetOfLanes,
-  // mergeLanes,
+  mergeLanes,
   // removeLanes,
-  // isTransitionLane,
-  // intersectLanes,
-  // markRootEntangled,
+  isTransitionLane,
+  intersectLanes,
+  markRootEntangled,
 } from './ReactFiberLane';
 // import {
 //   enterDisallowedContextReadInDEV,
@@ -233,5 +233,39 @@ export function enqueueUpdate<State>(
 }
 
 export function entangleTransitions(root: FiberRoot, fiber: Fiber, lane: Lane) {
-  throw new Error('Not implemented');
+  const updateQueue = fiber.updateQueue;
+  if (updateQueue === null) {
+    // Only occurs if the fiber has been unmounted.
+    return;
+  }
+
+  const sharedQueue: SharedQueue<mixed> = (updateQueue: any).shared;
+  if (isTransitionLane(lane)) {
+    let queueLanes = sharedQueue.lanes;
+
+    // 如果某些被纠缠（entangled）的 lanes 已经不再处于 root 的 pending 状态，
+    // 那么它们一定已经执行完成了。
+    // 我们可以把这些 lanes 从共享队列中移除。
+    // 这个共享队列表示的是“实际仍在 pending 的 lanes 的一个超集”。
+    // 在某些情况下，我们可能会纠缠（entangle）得比必要的更多一些，
+    // 但这没关系。
+    // 事实上，如果我们本该纠缠却没有纠缠，情况反而会更糟。
+
+    // If any entangled lanes are no longer pending on the root, then they must
+    // have finished. We can remove them from the shared queue, which represents
+    // a superset of the actually pending lanes. In some cases we may entangle
+    // more than we need to, but that's OK. In fact it's worse if we *don't*
+    // entangle when we should.
+    queueLanes = intersectLanes(queueLanes, root.pendingLanes);
+
+    // Entangle the new transition lane with the other transition lanes.
+    // queueLanes 里记录了该更新队列涉及的 lanes，而 root.pendingLanes 是整个 root 还在等待的 lanes
+    // intersectLanes 把两者相交，得到“这个队列里仍然属于当前 root pending 的那些 lanes”
+    const newQueueLanes = mergeLanes(queueLanes, lane);
+    sharedQueue.lanes = newQueueLanes;
+    // Even if queue.lanes already include lane, we don't know for certain if
+    // the lane finished since the last time we entangled it. So we need to
+    // entangle it again, just to be sure.
+    markRootEntangled(root, newQueueLanes);
+  }
 }

@@ -65,7 +65,7 @@ import {
   // scheduleCallback as Scheduler_scheduleCallback,
   // shouldYield,
   // requestPaint,
-  // now,
+  now,
   NormalPriority as NormalSchedulerPriority,
   IdlePriority as IdleSchedulerPriority,
 } from './Scheduler';
@@ -188,10 +188,10 @@ import {
   // getLanesToRetrySynchronouslyOnError,
   // upgradePendingLanesToSync,
   // markRootSuspended as _markRootSuspended,
-  // markRootUpdated as _markRootUpdated,
+  markRootUpdated as _markRootUpdated,
   // markRootPinged as _markRootPinged,
   // markRootFinished,
-  // addFiberToLanesMap,
+  addFiberToLanesMap,
   // movePendingFibersToMemoized,
   // addTransitionToLanesMap,
   // getTransitionsForLanes,
@@ -349,30 +349,30 @@ import {
 //   resetCurrentFiber,
 //   runWithFiberInDEV,
 // } from './ReactCurrentFiber';
-// import {
-//   isDevToolsPresent,
-//   markCommitStarted,
-//   markCommitStopped,
-//   markComponentRenderStopped,
-//   markComponentSuspended,
-//   markComponentErrored,
-//   markLayoutEffectsStarted,
-//   markLayoutEffectsStopped,
-//   markPassiveEffectsStarted,
-//   markPassiveEffectsStopped,
-//   markRenderStarted,
-//   markRenderYielded,
-//   markRenderStopped,
-//   onCommitRoot as onCommitRootDevTools,
-//   onPostCommitRoot as onPostCommitRootDevTools,
-//   setIsStrictModeForDevtools,
-// } from './ReactFiberDevToolsHook';
+import {
+  isDevToolsPresent,
+  // markCommitStarted,
+  // markCommitStopped,
+  // markComponentRenderStopped,
+  // markComponentSuspended,
+  // markComponentErrored,
+  // markLayoutEffectsStarted,
+  // markLayoutEffectsStopped,
+  // markPassiveEffectsStarted,
+  // markPassiveEffectsStopped,
+  // markRenderStarted,
+  // markRenderYielded,
+  // markRenderStopped,
+  // onCommitRoot as onCommitRootDevTools,
+  // onPostCommitRoot as onPostCommitRootDevTools,
+  // setIsStrictModeForDevtools,
+} from './ReactFiberDevToolsHook';
 // import {onCommitRoot as onCommitRootTestSelector} from './ReactTestSelectors';
 // import {releaseCache} from './ReactFiberCacheComponent';
-// import {
-//   isLegacyActEnvironment,
-//   isConcurrentActEnvironment,
-// } from './ReactFiberAct';
+import {
+  // isLegacyActEnvironment,
+  isConcurrentActEnvironment,
+} from './ReactFiberAct';
 // import {processTransitionCallbacks} from './ReactFiberTracingMarkerComponent';
 // import {
 //   SuspenseException,
@@ -387,12 +387,12 @@ import {
 //   getShellBoundary,
 // } from './ReactFiberSuspenseContext';
 // import {resetChildReconcilerOnUnwind} from './ReactChildFiber';
-// import {
-//   ensureRootIsScheduled,
-//   flushSyncWorkOnAllRoots,
-//   flushSyncWorkOnLegacyRootsOnly,
-//   requestTransitionLane,
-// } from './ReactFiberRootScheduler';
+import {
+  ensureRootIsScheduled,
+  // flushSyncWorkOnAllRoots,
+  // flushSyncWorkOnLegacyRootsOnly,
+  // requestTransitionLane,
+} from './ReactFiberRootScheduler';
 // import {getMaskedContext, getUnmaskedContext} from './ReactFiberLegacyContext';
 // import {logUncaughtError} from './ReactFiberErrorLogger';
 // import {
@@ -666,5 +666,173 @@ export function scheduleUpdateOnFiber(
   fiber: Fiber,
   lane: Lane,
 ) {
+  if (__DEV__) {
+    if (isRunningInsertionEffect) {
+      console.error('useInsertionEffect must not schedule updates.');
+    }
+  }
+
+  if (__DEV__) {
+    if (isFlushingPassiveEffects) {
+      didScheduleUpdateDuringPassiveEffects = true;
+    }
+  }
+
+  // Check if the work loop is currently suspended and waiting for data to
+  // finish loading.
+  if (
+    // Suspended render phase
+    (root === workInProgressRoot &&
+      (workInProgressSuspendedReason === SuspendedOnData ||
+        workInProgressSuspendedReason === SuspendedOnAction)) ||
+    // Suspended commit phase
+    root.cancelPendingCommit !== null
+  ) {
+    // The incoming update might unblock the current render. Interrupt the
+    // current attempt and restart from the top.
+    prepareFreshStack(root, NoLanes);
+    const didAttemptEntireTree = false;
+    markRootSuspended(
+      root,
+      workInProgressRootRenderLanes,
+      workInProgressDeferredLane,
+      didAttemptEntireTree,
+    );
+  }
+
+  // Mark that the root has a pending update.
+  markRootUpdated(root, lane);
+  if (
+    (executionContext & RenderContext) !== NoContext &&
+    root === workInProgressRoot
+  ) {
+    throw new Error('Not implemented yet.');
+  } else {
+    // This is a normal update, scheduled from outside the render phase. For
+    // example, during an input event.
+    if (enableUpdaterTracking) {
+      if (isDevToolsPresent) {
+        addFiberToLanesMap(root, fiber, lane);
+      }
+    }
+
+    warnIfUpdatesNotWrappedWithActDEV(fiber);
+
+    if (enableTransitionTracing) {
+      const transition = ReactSharedInternals.T;
+      if (transition !== null && transition.name != null) {
+        if (transition.startTime === -1) {
+          transition.startTime = now();
+        }
+
+        // addTransitionToLanesMap(root, transition, lane);
+        throw new Error('Not implemented yet.');
+      }
+    }
+
+    if (root === workInProgressRoot) {
+      throw new Error('Not implemented yet.');
+    }
+
+    ensureRootIsScheduled(root);
+
+    if (
+      lane === SyncLane &&
+      executionContext === NoContext &&
+      !disableLegacyMode &&
+      (fiber.mode & ConcurrentMode) === NoMode
+    ) {
+      if (__DEV__ && ReactSharedInternals.isBatchingLegacy) {
+        // Treat `act` as if it's inside `batchedUpdates`, even in legacy mode.
+      } else {
+        throw new Error('Not implemented yet.');
+      }
+    }
+  }
+}
+
+function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
+  if (enableProfilerTimer && enableComponentPerformanceTrack) {
+    throw new Error('Not implemented yet.');
+  }
   throw new Error('Not implemented yet.');
+}
+
+// The extra indirections around markRootUpdated and markRootSuspended is
+// needed to avoid a circular dependency between this module and
+// ReactFiberLane. There's probably a better way to split up these modules and
+// avoid this problem. Perhaps all the root-marking functions should move into
+// the work loop.
+
+function markRootUpdated(root: FiberRoot, updatedLanes: Lanes) {
+  _markRootUpdated(root, updatedLanes);
+
+  if (enableInfiniteRenderLoopDetection) {
+    // Check for recursive updates
+    if (executionContext & RenderContext) {
+      workInProgressRootDidIncludeRecursiveRenderUpdate = true;
+    } else if (executionContext & CommitContext) {
+      didIncludeCommitPhaseUpdate = true;
+    }
+
+    throwIfInfiniteUpdateLoopDetected();
+  }
+}
+
+function markRootSuspended(
+  root: FiberRoot,
+  suspendedLanes: Lanes,
+  spawnedLane: Lane,
+  didAttemptEntireTree: boolean,
+) {
+  throw new Error('Not implemented yet.');
+}
+
+function warnIfUpdatesNotWrappedWithActDEV(fiber: Fiber): void {
+  if (__DEV__) {
+    if (disableLegacyMode || fiber.mode & ConcurrentMode) {
+      if (!isConcurrentActEnvironment()) {
+        // Not in an act environment. No need to warn.
+        return;
+      }
+    } else {
+      //   // Legacy mode has additional cases where we suppress a warning.
+      //   if (!isLegacyActEnvironment(fiber)) {
+      //     // Not in an act environment. No need to warn.
+      //     return;
+      //   }
+      //   if (executionContext !== NoContext) {
+      //     // Legacy mode doesn't warn if the update is batched, i.e.
+      //     // batchedUpdates or flushSync.
+      //     return;
+      //   }
+      //   if (
+      //     fiber.tag !== FunctionComponent &&
+      //     fiber.tag !== ForwardRef &&
+      //     fiber.tag !== SimpleMemoComponent
+      //   ) {
+      //     // For backwards compatibility with pre-hooks code, legacy mode only
+      //     // warns for updates that originate from a hook.
+      //     return;
+      throw new Error('Not implemented yet.');
+    }
+    // if (ReactSharedInternals.actQueue === null) {
+    //   runWithFiberInDEV(fiber, () => {
+    //     console.error(
+    //       'An update to %s inside a test was not wrapped in act(...).\n\n' +
+    //         'When testing, code that causes React state updates should be ' +
+    //         'wrapped into act(...):\n\n' +
+    //         'act(() => {\n' +
+    //         '  /* fire events that update state */\n' +
+    //         '});\n' +
+    //         '/* assert on the output */\n\n' +
+    //         "This ensures that you're testing the behavior the user would see " +
+    //         'in the browser.' +
+    //         ' Learn more at https://react.dev/link/wrap-tests-with-act',
+    //       getComponentNameFromFiber(fiber),
+    //     );
+    //   });
+    // }
+    throw new Error('Not implemented yet.');
+  }
 }

@@ -18,6 +18,22 @@ export type Lanes = number;
 export type Lane = number;
 export type LaneMap<T> = Array<T>;
 
+import {
+  enableRetryLaneExpiration,
+  enableSchedulingProfiler,
+  enableTransitionTracing,
+  enableUpdaterTracking,
+  syncLaneExpirationMs,
+  transitionLaneExpirationMs,
+  retryLaneExpirationMs,
+  disableLegacyMode,
+  enableDefaultTransitionIndicator,
+  enableGestureTransition,
+} from 'shared/ReactFeatureFlags';
+import {isDevToolsPresent} from './ReactFiberDevToolsHook';
+import {clz32} from './clz32';
+import {LegacyRoot} from './ReactRootTags';
+
 // Lane values below should be kept in sync with getLabelForLane(), used by react-devtools-timeline.
 // If those values are changed that package should be rebuilt and redeployed.
 
@@ -129,4 +145,144 @@ export function pickArbitraryLane(lanes: Lanes): Lane {
 
 export function mergeLanes(a: Lanes | Lane, b: Lanes | Lane): Lanes {
   return a | b;
+}
+
+// 用来从一组 lanes（位掩码）里选一个索引
+function pickArbitraryLaneIndex(lanes: Lanes) {
+  // 返回 32 位整数前导零的数量
+  // 31 - clz32(lanes) 等价于最高位的 1 的索引，也就是选出最高优先级的 lane
+  return 31 - clz32(lanes);
+}
+
+// 把单个 lane 转成索引
+function laneToIndex(lane: Lane) {
+  // 复用上面的逻辑
+  return pickArbitraryLaneIndex(lane);
+}
+
+export function markRootUpdated(root: FiberRoot, updateLane: Lane) {
+  root.pendingLanes |= updateLane;
+  if (enableDefaultTransitionIndicator) {
+    // Mark that this lane might need a loading indicator to be shown.
+    root.indicatorLanes |= updateLane & TransitionLanes;
+  }
+
+  // If there are any suspended transitions, it's possible this new update
+  // could unblock them. Clear the suspended lanes so that we can try rendering
+  // them again.
+  //
+  // TODO: We really only need to unsuspend only lanes that are in the
+  // `subtreeLanes` of the updated fiber, or the update lanes of the return
+  // path. This would exclude suspended updates in an unrelated sibling tree,
+  // since there's no way for this update to unblock it.
+  //
+  // We don't do this if the incoming update is idle, because we never process
+  // idle updates until after all the regular updates have finished; there's no
+  // way it could unblock a transition.
+  if (updateLane !== IdleLane) {
+    root.suspendedLanes = NoLanes;
+    root.pingedLanes = NoLanes;
+    root.warmLanes = NoLanes;
+  }
+}
+
+// @why 这个看起来还挺重要的方法，但是我没看懂什么意思？
+export function addFiberToLanesMap(
+  root: FiberRoot,
+  fiber: Fiber,
+  lanes: Lanes | Lane,
+) {
+  // 如果没有开启更新追踪特性，直接跳过
+  if (!enableUpdaterTracking) {
+    return;
+  }
+  // 如果没有检测到 React DevTools，没必要记录更新者
+  if (!isDevToolsPresent) {
+    return;
+  }
+  // 取出 root 上的按 lane 记录更新者的映射结构
+  const pendingUpdatersLaneMap = root.pendingUpdatersLaneMap;
+  // 只要 lanes 里还有待处理的位（lane）
+  while (lanes > 0) {
+    // 取出当前 lanes 中一个 lane 的索引（通常是最高位的 1）
+    const index = laneToIndex(lanes);
+    // 把索引转回单个 lane 的位掩码
+    const lane = 1 << index;
+
+    // 拿到这个 lane 对应的更新者集合
+    const updaters = pendingUpdatersLaneMap[index];
+    // 把触发更新的 fiber 加入集合，方便 DevTools 显示谁触发了更新
+    updaters.add(fiber);
+
+    // 把刚处理过的 lane 位从 lanes 中清掉，继续循环下一个
+    lanes &= ~lane;
+  }
+}
+
+export function markRootEntangled(root: FiberRoot, entangledLanes: Lanes) {
+  // 除了要让传入的各个 lanes 彼此纠缠（entangle）之外，
+  // 我们还必须考虑「传递性的」纠缠关系。
+  // 对于任何已经与这些 lanes 中 *任意一个* 发生纠缠的 lane，
+  // 它现在都会通过传递关系，与 *所有* 传入的 lanes 发生纠缠。
+  //
+  // 换句话说：如果 C 已经和 A 纠缠在一起，
+  // 那么当我们把 A 和 B 纠缠时，
+  // C 也会随之和 B 纠缠。
+  //
+  // 如果这件事不太好理解，
+  // 一个可能有帮助的方法是：
+  // 故意把这个函数写坏，
+  // 然后去看看 ReactTransition-test.js 里有哪些测试会失败。
+  // 比如，尝试把下面的某一个条件注释掉。
+
+  // In addition to entangling each of the given lanes with each other, we also
+  // have to consider _transitive_ entanglements. For each lane that is already
+  // entangled with *any* of the given lanes, that lane is now transitively
+  // entangled with *all* the given lanes.
+  //
+  // Translated: If C is entangled with A, then entangling A with B also
+  // entangles C with B.
+  //
+  // If this is hard to grasp, it might help to intentionally break this
+  // function and look at the tests that fail in ReactTransition-test.js. Try
+  // commenting out one of the conditions below.
+
+  // 把新传入的 entangledLanes 合并进 root.entangledLanes，并把结果保存为 rootEntangledLanes
+  const rootEntangledLanes = (root.entangledLanes |= entangledLanes);
+  // 取出 root 上的 entanglements 数组（每个 lane 对应一份纠缠的 lanes 位掩码）
+  const entanglements = root.entanglements;
+  // 准备遍历所有已纠缠的 lanes
+  let lanes = rootEntangledLanes;
+  // 只要还有未处理的 lane 位，就继续循环
+  while (lanes) {
+    // 取出当前 lanes 中任意一个 lane 的索引（通常是最高位）
+    const index = pickArbitraryLaneIndex(lanes);
+    // 把索引转回单个 lane 的位掩码
+    const lane = 1 << index;
+    if (
+      // Is this one of the newly entangled lanes?
+      // 判断这个 lane 是否属于新纠缠的那批 lanes
+      (lane & entangledLanes) |
+      // Is this lane transitively entangled with the newly entangled lanes?
+      // 这个 lane 是否已经与新纠缠 lanes 中的某个 lane 有纠缠关系（传递纠缠）
+      (entanglements[index] & entangledLanes)
+    ) {
+      // 把新纠缠的 lanes 合并到该 lane 的纠缠集合里
+      entanglements[index] |= entangledLanes;
+    }
+    // 清掉刚处理过的 lane 位，继续下一个
+    lanes &= ~lane;
+  }
+}
+
+export function isTransitionLane(lane: Lane): boolean {
+  // TransitionLanes 是过渡更新
+  // 通过 startTransition / useTransition 产生的更新会落在这些 lanes 里
+  // 它们是 低优先级、可中断 的更新，用于不阻塞用户交互的渲染
+  // isTransitionLane 就是用 lane & TransitionLanes 来判断某个 lane 是否属于这组
+  return (lane & TransitionLanes) !== NoLanes;
+}
+
+export function intersectLanes(a: Lanes | Lane, b: Lanes | Lane): Lanes {
+  return a & b;
 }

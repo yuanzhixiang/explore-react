@@ -335,4 +335,37 @@ interface CustomTimeline {
 
 export type GestureTimeline = AnimationTimeline | CustomTimeline;
 
+// This initialization code may run even on server environments
+// if a component just imports ReactDOM (e.g. for findDOMNode).
+// Some environments might not have setTimeout or clearTimeout.
+export const scheduleTimeout: any =
+  typeof setTimeout === 'function' ? setTimeout : (undefined: any);
+export const cancelTimeout: any =
+  typeof clearTimeout === 'function' ? clearTimeout : (undefined: any);
 export const noTimeout: -1 = -1;
+const localPromise = typeof Promise === 'function' ? Promise : undefined;
+
+// -------------------
+//     Microtasks
+// -------------------
+export const supportsMicrotasks = true;
+// 导出一个常量 scheduleMicrotask（类型标注为 any）
+// 这个函数的用处是在 ui 例如 click 任务结束后、浏览器下一次渲染之前执行
+export const scheduleMicrotask: any =
+  // 如果全局有原生的 queueMicrotask 函数就直接用它
+  typeof queueMicrotask === 'function'
+    ? queueMicrotask
+    : // 否则如果有 Promise（这里叫 localPromise），用 Promise 的 microtask 来实现
+      typeof localPromise !== 'undefined'
+      ? // 先 resolve 再 then 执行回调；catch 用来处理异步错误
+        callback =>
+          localPromise.resolve(null).then(callback).catch(handleErrorInNextTick)
+      : // 如果连 Promise 都没有，就退回到 setTimeout 级别的宏任务；
+        // 旁边的注释说这是个待改进的 fallback
+        scheduleTimeout; // TODO: Determine the best fallback here.
+
+function handleErrorInNextTick(error: any) {
+  setTimeout(() => {
+    throw error;
+  });
+}

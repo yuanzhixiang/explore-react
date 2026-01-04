@@ -117,6 +117,8 @@ import type {ReactComponentInfo} from '../../shared/ReactTypes';
 // import isArray from 'shared/isArray';
 // import getComponentNameFromType from 'shared/getComponentNameFromType';
 
+export type {Fiber};
+
 let hasBadMapPolyfill;
 
 // 在 开发模式 下检测环境里的 Map/Set 是否是有问题的 polyfill
