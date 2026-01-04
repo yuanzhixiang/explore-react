@@ -559,3 +559,13 @@ export function requestUpdateLane(fiber: Fiber): Lane {
   }
   return eventPriorityToLane(resolveUpdatePriority());
 }
+
+// 检查当前是不是渲染阶段的更新
+export function isUnsafeClassRenderPhaseUpdate(fiber: Fiber): boolean {
+  // Check if this is a render phase update. Only called by class components,
+  // which special (deprecated) behavior for UNSAFE_componentWillReceive props.
+  // 判断当前执行上下文里是否包含 RenderContext 标志
+  // 这个函数只会被类组件调用，因为类组件在 UNSAFE_componentWillReceiveProps
+  // 这种已废弃的生命周期里有特殊处理逻辑。
+  return (executionContext & RenderContext) !== NoContext;
+}

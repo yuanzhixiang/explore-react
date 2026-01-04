@@ -108,18 +108,18 @@ import {
 //   ShouldCapture,
 //   DidCapture,
 // } from './ReactFiberFlags';
-// import getComponentNameFromFiber from './getComponentNameFromFiber';
+import getComponentNameFromFiber from './getComponentNameFromFiber';
 
 // import {StrictLegacyMode} from './ReactTypeOfMode';
-// import {
-//   markSkippedUpdateLanes,
-//   isUnsafeClassRenderPhaseUpdate,
-//   getWorkInProgressRootRenderLanes,
-// } from './ReactFiberWorkLoop';
-// import {
-//   enqueueConcurrentClassUpdate,
-//   unsafe_markUpdateLaneFromFiberToRoot,
-// } from './ReactFiberConcurrentUpdates';
+import {
+  // markSkippedUpdateLanes,
+  isUnsafeClassRenderPhaseUpdate,
+  // getWorkInProgressRootRenderLanes,
+} from './ReactFiberWorkLoop';
+import {
+  enqueueConcurrentClassUpdate,
+  // unsafe_markUpdateLaneFromFiberToRoot,
+} from './ReactFiberConcurrentUpdates';
 // import {setIsStrictModeForDevtools} from './ReactFiberDevToolsHook';
 
 // import assign from 'shared/assign';
@@ -157,6 +157,14 @@ export const ReplaceState = 1;
 export const ForceUpdate = 2;
 export const CaptureUpdate = 3;
 
+// Global state that is reset at the beginning of calling `processUpdateQueue`.
+// It should only be read right after calling `processUpdateQueue`, via
+// `checkHasForceUpdateAfterProcessing`.
+let hasForceUpdate = false;
+
+let didWarnUpdateInsideUpdate;
+let currentlyProcessingQueue: ?SharedQueue<$FlowFixMe>;
+
 export function initializeUpdateQueue<State>(fiber: Fiber): void {
   const queue: UpdateQueue<State> = {
     // memoizedState 是该 Fiber 上一次完成渲染后的状态快照
@@ -192,5 +200,34 @@ export function enqueueUpdate<State>(
   update: Update<State>,
   lane: Lane,
 ): FiberRoot | null {
-  throw new Error('Not implemented');
+  const updateQueue = fiber.updateQueue;
+  if (updateQueue === null) {
+    // Only occurs if the fiber has been unmounted.
+    return null;
+  }
+
+  const sharedQueue: SharedQueue<State> = (updateQueue: any).shared;
+
+  if (__DEV__) {
+    if (
+      currentlyProcessingQueue === sharedQueue &&
+      !didWarnUpdateInsideUpdate
+    ) {
+      const componentName = getComponentNameFromFiber(fiber);
+      console.error(
+        'An update (setState, replaceState, or forceUpdate) was scheduled ' +
+          'from inside an update function. Update functions should be pure, ' +
+          'with zero side-effects. Consider using componentDidUpdate or a ' +
+          'callback.\n\nPlease update the following component: %s',
+        componentName,
+      );
+      didWarnUpdateInsideUpdate = true;
+    }
+  }
+
+  if (isUnsafeClassRenderPhaseUpdate(fiber)) {
+    throw new Error('Not implemented');
+  } else {
+    return enqueueConcurrentClassUpdate(fiber, sharedQueue, update, lane);
+  }
 }

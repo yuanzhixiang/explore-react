@@ -126,3 +126,7 @@ export function pickArbitraryLane(lanes: Lanes): Lane {
   // return getHighestPriorityLane(lanes);
   throw new Error('Not implemented');
 }
+
+export function mergeLanes(a: Lanes | Lane, b: Lanes | Lane): Lanes {
+  return a | b;
+}
