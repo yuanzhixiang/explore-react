@@ -836,3 +836,7 @@ function warnIfUpdatesNotWrappedWithActDEV(fiber: Fiber): void {
     throw new Error('Not implemented yet.');
   }
 }
+
+export function getExecutionContext(): ExecutionContext {
+  return executionContext;
+}

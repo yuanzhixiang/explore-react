@@ -30,7 +30,7 @@ import {
   // getHighestPriorityLane,
   // getNextLanes,
   // includesSyncLane,
-  // markStarvedLanesAsExpired,
+  markStarvedLanesAsExpired,
   // claimNextTransitionUpdateLane,
   // getNextLanesToFlushSync,
   // checkIfRootIsPrerendering,
@@ -42,7 +42,7 @@ import {
   RenderContext,
   // flushPendingEffects,
   // flushPendingEffectsDelayed,
-  // getExecutionContext,
+  getExecutionContext,
   // getWorkInProgressRoot,
   // getWorkInProgressRootRenderLanes,
   // getRootWithPendingPassiveEffects,
@@ -211,9 +211,82 @@ function scheduleImmediateRootScheduleTask() {
   // Alternatively, can we move this check to the host config?
   if (supportsMicrotasks) {
     scheduleMicrotask(() => {
-      throw new Error('Not implemented');
+      // 在 Safari 中，向 DOM 里追加一个 iframe 会强制触发 microtask 的执行。
+      // https://github.com/facebook/react/issues/22459
+      // 我们不支持在 render 或 commit 的过程中执行回调，
+      // 因此需要对此进行检查和防护。
+
+      // In Safari, appending an iframe forces microtasks to run.
+      // https://github.com/facebook/react/issues/22459
+      // We don't support running callbacks in the middle of render
+      // or commit so we need to check against that.
+      const executionContext = getExecutionContext();
+      if ((executionContext & (RenderContext | CommitContext)) !== NoContext) {
+        throw new Error('Not implemented');
+      }
+      processRootScheduleInMicrotask();
     });
   } else {
     throw new Error('Not implemented');
   }
+}
+
+function processRootScheduleInMicrotask() {
+  // This function is always called inside a microtask. It should never be
+  // called synchronously.
+  didScheduleMicrotask = false;
+  if (__DEV__) {
+    didScheduleMicrotask_act = false;
+  }
+
+  // We'll recompute this as we iterate through all the roots and schedule them.
+  mightHavePendingSyncWork = false;
+
+  let syncTransitionLanes = NoLanes;
+  if (currentEventTransitionLane !== NoLane) {
+    throw new Error('Not implemented');
+  }
+
+  const currentTime = now();
+
+  let prev = null;
+  let root = firstScheduledRoot;
+  while (root !== null) {
+    const next = root.next;
+    const nextLanes = scheduleTaskForRootDuringMicrotask(root, currentTime);
+    if (nextLanes === NoLane) {
+      throw new Error('Not implemented');
+    } else {
+      throw new Error('Not implemented');
+    }
+  }
+  throw new Error('Not implemented');
+}
+
+function scheduleTaskForRootDuringMicrotask(
+  root: FiberRoot,
+  currentTime: number,
+): Lane {
+  // 这个函数总是在 microtask 中被调用，
+  // 或者是在一次渲染任务结束的最后阶段、
+  // 在即将把控制权让回主线程之前被调用。
+  // 它绝不应该以同步方式被调用。
+  // This function is always called inside a microtask, or at the very end of a
+  // rendering task right before we yield to the main thread. It should never be
+  // called synchronously.
+
+  // 这个函数本身也从不以同步方式执行任何 React 工作；
+  // 它只负责安排（schedule）之后要执行的工作，
+  // 而这些工作会在另一个 task 或 microtask 中完成。
+  // This function also never performs React work synchronously; it should
+  // only schedule work to be performed later, in a separate task or microtask.
+
+  // 检查是否有某些 lanes 被其他工作长期挤压（starved）。
+  // 如果有，就把它们标记为已过期（expired），
+  // 以便我们知道接下来应该优先处理这些 lanes。
+  // Check if any lanes are being starved by other work. If so, mark them as
+  // expired so we know to work on those next.
+  markStarvedLanesAsExpired(root, currentTime);
+
+  throw new Error('Not implemented');
 }

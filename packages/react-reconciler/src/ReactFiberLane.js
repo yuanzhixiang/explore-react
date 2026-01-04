@@ -275,6 +275,80 @@ export function markRootEntangled(root: FiberRoot, entangledLanes: Lanes) {
   }
 }
 
+export function markStarvedLanesAsExpired(
+  root: FiberRoot,
+  currentTime: number,
+): void {
+  // TODO：这个函数在每一次 yield（让出执行权）时都会被调用。
+  // 我们可以通过一种方式来优化：
+  // 在 root 上保存最早的过期时间（earliest expiration time）。
+  // 然后利用这个时间点，
+  // 快速地从这个函数中直接返回（bail out），避免不必要的计算。
+
+  // TODO: This gets called every time we yield. We can optimize by storing
+  // the earliest expiration time on the root. Then use that to quickly bail out
+  // of this function.
+
+  const pendingLanes = root.pendingLanes;
+  const suspendedLanes = root.suspendedLanes;
+  const pingedLanes = root.pingedLanes;
+  const expirationTimes = root.expirationTimes;
+
+  // Iterate through the pending lanes and check if we've reached their
+  // expiration time. If so, we'll assume the update is being starved and mark
+  // it as expired to force it to finish.
+  // TODO: We should be able to replace this with upgradePendingLanesToSync
+  //
+  // We exclude retry lanes because those must always be time sliced, in order
+  // to unwrap uncached promises.
+  // TODO: Write a test for this
+  // 声明变量 lanes，取值取决于 enableRetryLaneExpiration 开关
+  // 开关打开就保留所有 pending lanes；否则忽略 RetryLanes
+  let lanes = enableRetryLaneExpiration
+    ? // 如果开启了 Retry lane 过期特性，就直接用 pendingLanes（包含所有待处理的 lanes）
+      pendingLanes
+    : // 否则从 pendingLanes 中把 RetryLanes 这类 lane 排除掉（位运算清掉对应位）
+      pendingLanes & ~RetryLanes;
+
+  // 只要还有待处理的 lane 位，就继续循环
+  while (lanes > 0) {
+    // 从 lanes 位掩码里取出一个 lane 的索引（通常是最高位的 1）
+    const index = pickArbitraryLaneIndex(lanes);
+    // 把索引转成单个 lane 的位掩码
+    const lane = 1 << index;
+
+    // 取出这个 lane 当前的过期时间
+    const expirationTime = expirationTimes[index];
+    // 如果还没有设置过期时间
+    if (expirationTime === NoTimestamp) {
+      // 发现了一个没有过期时间的待处理 lane；如果它没被挂起，或者已经被 ping，
+      // 就认为它是 CPU-bound 的，给它计算一个新的过期时间
+      // Found a pending lane with no expiration time. If it's not suspended, or
+      // if it's pinged, assume it's CPU-bound. Compute a new expiration time
+      // using the current time.
+      if (
+        // 如果这个 lane 没有被挂起
+        (lane & suspendedLanes) === NoLanes ||
+        // 或者这个 lane 已经被 ping 过（从挂起状态恢复信号）
+        (lane & pingedLanes) !== NoLanes
+      ) {
+        // Assumes timestamps are monotonically increasing.
+        // 假设时间戳是单调递增的
+        expirationTimes[index] = computeExpirationTime(lane, currentTime);
+      }
+    }
+    // 如果已有过期时间，并且已经到了当前时间
+    else if (expirationTime <= currentTime) {
+      // This lane expired
+      // 把该 lane 标记为已过期（合并到 root.expiredLanes）
+      root.expiredLanes |= lane;
+    }
+
+    // 把刚处理过的 lane 位从 lanes 中清掉
+    lanes &= ~lane;
+  }
+}
+
 export function isTransitionLane(lane: Lane): boolean {
   // TransitionLanes 是过渡更新
   // 通过 startTransition / useTransition 产生的更新会落在这些 lanes 里
@@ -285,4 +359,68 @@ export function isTransitionLane(lane: Lane): boolean {
 
 export function intersectLanes(a: Lanes | Lane, b: Lanes | Lane): Lanes {
   return a & b;
+}
+
+function computeExpirationTime(lane: Lane, currentTime: number) {
+  switch (lane) {
+    case SyncHydrationLane:
+    case SyncLane:
+    case InputContinuousHydrationLane:
+    case InputContinuousLane:
+    case GestureLane:
+      // User interactions should expire slightly more quickly.
+      //
+      // NOTE: This is set to the corresponding constant as in Scheduler.js.
+      // When we made it larger, a product metric in www regressed, suggesting
+      // there's a user interaction that's being starved by a series of
+      // synchronous updates. If that theory is correct, the proper solution is
+      // to fix the starvation. However, this scenario supports the idea that
+      // expiration times are an important safeguard when starvation
+      // does happen.
+      return currentTime + syncLaneExpirationMs;
+    case DefaultHydrationLane:
+    case DefaultLane:
+    case TransitionHydrationLane:
+    case TransitionLane1:
+    case TransitionLane2:
+    case TransitionLane3:
+    case TransitionLane4:
+    case TransitionLane5:
+    case TransitionLane6:
+    case TransitionLane7:
+    case TransitionLane8:
+    case TransitionLane9:
+    case TransitionLane10:
+    case TransitionLane11:
+    case TransitionLane12:
+    case TransitionLane13:
+    case TransitionLane14:
+      return currentTime + transitionLaneExpirationMs;
+    case RetryLane1:
+    case RetryLane2:
+    case RetryLane3:
+    case RetryLane4:
+      // TODO: Retries should be allowed to expire if they are CPU bound for
+      // too long, but when I made this change it caused a spike in browser
+      // crashes. There must be some other underlying bug; not super urgent but
+      // ideally should figure out why and fix it. Unfortunately we don't have
+      // a repro for the crashes, only detected via production metrics.
+      return enableRetryLaneExpiration
+        ? currentTime + retryLaneExpirationMs
+        : NoTimestamp;
+    case SelectiveHydrationLane:
+    case IdleHydrationLane:
+    case IdleLane:
+    case OffscreenLane:
+    case DeferredLane:
+      // Anything idle priority or lower should never expire.
+      return NoTimestamp;
+    default:
+      if (__DEV__) {
+        console.error(
+          'Should have found matching lanes. This is a bug in React.',
+        );
+      }
+      return NoTimestamp;
+  }
 }
