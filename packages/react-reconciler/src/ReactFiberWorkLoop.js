@@ -573,6 +573,18 @@ let rootWithPassiveNestedUpdates: FiberRoot | null = null;
 
 let isRunningInsertionEffect = false;
 
+export function getWorkInProgressRoot(): FiberRoot | null {
+  return workInProgressRoot;
+}
+
+export function getCommittingRoot(): FiberRoot | null {
+  return pendingEffectsRoot;
+}
+
+export function getWorkInProgressRootRenderLanes(): Lanes {
+  return workInProgressRootRenderLanes;
+}
+
 // The first setState call that eventually caused the current render.
 let workInProgressUpdateTask: null | ConsoleTask = null;
 
@@ -839,4 +851,21 @@ function warnIfUpdatesNotWrappedWithActDEV(fiber: Fiber): void {
 
 export function getExecutionContext(): ExecutionContext {
   return executionContext;
+}
+
+export function getRootWithPendingPassiveEffects(): FiberRoot | null {
+  // 如果当前待处理副作用的状态是 PENDING_PASSIVE_PHASE（表示有被动 effect 还没处理）
+  return pendingEffectsStatus === PENDING_PASSIVE_PHASE
+    ? // 就返回对应的 root
+      pendingEffectsRoot
+    : // 否则返回 null
+      null;
+}
+
+export function getPendingPassiveEffectsLanes(): Lanes {
+  return pendingEffectsLanes;
+}
+
+export function getPendingTransitionTypes(): null | TransitionTypes {
+  return pendingTransitionTypes;
 }

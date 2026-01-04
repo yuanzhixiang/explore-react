@@ -28,7 +28,7 @@ import {
   SyncLane,
   DefaultLane,
   // getHighestPriorityLane,
-  // getNextLanes,
+  getNextLanes,
   // includesSyncLane,
   markStarvedLanesAsExpired,
   // claimNextTransitionUpdateLane,
@@ -43,10 +43,10 @@ import {
   // flushPendingEffects,
   // flushPendingEffectsDelayed,
   getExecutionContext,
-  // getWorkInProgressRoot,
-  // getWorkInProgressRootRenderLanes,
-  // getRootWithPendingPassiveEffects,
-  // getPendingPassiveEffectsLanes,
+  getWorkInProgressRoot,
+  getWorkInProgressRootRenderLanes,
+  getRootWithPendingPassiveEffects,
+  getPendingPassiveEffectsLanes,
   // hasPendingCommitEffects,
   // isWorkLoopSuspendedOnData,
   // performWorkOnRoot,
@@ -288,5 +288,49 @@ function scheduleTaskForRootDuringMicrotask(
   // expired so we know to work on those next.
   markStarvedLanesAsExpired(root, currentTime);
 
+  // Determine the next lanes to work on, and their priority.
+  // 取出当前还有待处理 passive effects（useEffect） 的根节点
+  const rootWithPendingPassiveEffects = getRootWithPendingPassiveEffects();
+  // 取出这些待处理 passive effects 所在的 lanes（优先级通道集合）
+  const pendingPassiveEffectsLanes = getPendingPassiveEffectsLanes();
+  // 取出当前正在渲染中的 root（WIP root）
+  const workInProgressRoot = getWorkInProgressRoot();
+  // 取出当前这次渲染使用的 lanes 集合
+  const workInProgressRootRenderLanes = getWorkInProgressRootRenderLanes();
+  // 计算当前 root 是否还有待提交的状态
+  const rootHasPendingCommit =
+    // 如果有取消提交的回调，或有未清的超时句柄，就认为有 pending commit
+    root.cancelPendingCommit !== null || root.timeoutHandle !== noTimeout;
+  // 计算下一批要调度的 lanes
+  const nextLanes =
+    // 如果开启了在 passive effects 前让出的特性，并且当前 root 就是那个有 pending passive effects 的 root
+    enableYieldingBeforePassive && root === rootWithPendingPassiveEffects
+      ? // 这里会按照对应 lane 的优先级来调度这个回调，
+        // 但我们过去一直是用 NormalPriority 来调度的。
+        // 对于 Discrete（离散）更新来说，反正都会同步 flush，
+        // 所以其实没有区别。
+        // 真正有区别的只有 Idle，
+        // 而且仅仅因为我们已经过了 commit 阶段，
+        // 就把一个 Idle 的工作升级到比更重要的事情还高的优先级，
+        // 这看起来并不一定是合理的。
+
+        // This will schedule the callback at the priority of the lane but we used to
+        // always schedule it at NormalPriority. Discrete will flush it sync anyway.
+        // So the only difference is Idle and it doesn't seem necessarily right for that
+        // to get upgraded beyond something important just because we're past commit.
+
+        // 那就直接用 pending passive effects 的 lanes 来调度
+        pendingPassiveEffectsLanes
+      : // 否则走常规逻辑，通过 getNextLanes 计算
+        getNextLanes(
+          // 传入当前 root
+          root,
+          // 如果当前 root 正在渲染，传入正在渲染的 lanes；否则传 NoLanes
+          root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
+          // 传入是否存在 pending commit 的标志
+          rootHasPendingCommit,
+        );
+
+  const existingCallbackNode = root.callbackNode;
   throw new Error('Not implemented');
 }

@@ -424,3 +424,11 @@ function computeExpirationTime(lane: Lane, currentTime: number) {
       return NoTimestamp;
   }
 }
+
+export function getNextLanes(
+  root: FiberRoot,
+  wipLanes: Lanes,
+  rootHasPendingCommit: boolean,
+): Lanes {
+  throw new Error('Not implemented');
+}
