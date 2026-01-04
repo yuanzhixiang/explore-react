@@ -231,3 +231,7 @@ export function enqueueUpdate<State>(
     return enqueueConcurrentClassUpdate(fiber, sharedQueue, update, lane);
   }
 }
+
+export function entangleTransitions(root: FiberRoot, fiber: Fiber, lane: Lane) {
+  throw new Error('Not implemented');
+}

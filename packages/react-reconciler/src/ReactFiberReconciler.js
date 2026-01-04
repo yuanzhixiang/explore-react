@@ -66,10 +66,10 @@ import {
   onScheduleRoot,
   // injectProfilingHooks,
 } from './ReactFiberDevToolsHook';
-// import {startUpdateTimerByLane} from './ReactProfilerTimer';
+import {startUpdateTimerByLane} from './ReactProfilerTimer';
 import {
   requestUpdateLane,
-  // scheduleUpdateOnFiber,
+  scheduleUpdateOnFiber,
   // scheduleInitialHydrationOnRoot,
   // flushRoot,
   // batchedUpdates,
@@ -84,7 +84,7 @@ import {
 import {
   createUpdate,
   enqueueUpdate,
-  // entangleTransitions,
+  entangleTransitions,
 } from './ReactFiberClassUpdateQueue';
 import {
   isRendering as ReactCurrentFiberIsRendering,
@@ -273,5 +273,9 @@ function updateContainerImpl(
   }
 
   const root = enqueueUpdate(rootFiber, update, lane);
-  throw new Error('Not implemented yet.');
+  if (root !== null) {
+    startUpdateTimerByLane(lane, 'root.render()', null);
+    scheduleUpdateOnFiber(root, rootFiber, lane);
+    entangleTransitions(root, rootFiber, lane);
+  }
 }

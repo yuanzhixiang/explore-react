@@ -172,7 +172,7 @@ import {
   // claimNextRetryLane,
   // includesSyncLane,
   // isSubsetOfLanes,
-  // mergeLanes,
+  mergeLanes,
   // removeLanes,
   pickArbitraryLane,
   // includesNonIdleWork,
@@ -525,6 +525,54 @@ export function getWorkInProgressTransitions(): null | Array<Transition> {
   return workInProgressTransitions;
 }
 
+let legacyErrorBoundariesThatAlreadyFailed: Set<mixed> | null = null;
+
+type SuspendedCommitReason = null | string;
+
+type DelayedCommitReason = 0 | 1 | 2 | 3;
+const IMMEDIATE_COMMIT = 0;
+const ABORTED_VIEW_TRANSITION_COMMIT = 1;
+const DELAYED_PASSIVE_COMMIT = 2;
+const ANIMATION_STARTED_COMMIT = 3;
+
+const NO_PENDING_EFFECTS = 0;
+const PENDING_MUTATION_PHASE = 1;
+const PENDING_LAYOUT_PHASE = 2;
+const PENDING_AFTER_MUTATION_PHASE = 3;
+const PENDING_SPAWNED_WORK = 4;
+const PENDING_PASSIVE_PHASE = 5;
+const PENDING_GESTURE_MUTATION_PHASE = 6;
+const PENDING_GESTURE_ANIMATION_PHASE = 7;
+let pendingEffectsStatus: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 = 0;
+let pendingEffectsRoot: FiberRoot = (null: any);
+let pendingFinishedWork: Fiber = (null: any);
+let pendingEffectsLanes: Lanes = NoLanes;
+let pendingEffectsRemainingLanes: Lanes = NoLanes;
+let pendingEffectsRenderEndTime: number = -0; // Profiling-only
+let pendingPassiveTransitions: Array<Transition> | null = null;
+let pendingRecoverableErrors: null | Array<CapturedValue<mixed>> = null;
+let pendingViewTransition: null | RunningViewTransition = null;
+let pendingViewTransitionEvents: Array<(types: Array<string>) => void> | null =
+  null;
+let pendingTransitionTypes: null | TransitionTypes = null;
+let pendingDidIncludeRenderPhaseUpdate: boolean = false;
+let pendingSuspendedCommitReason: SuspendedCommitReason = null; // Profiling-only
+let pendingDelayedCommitReason: DelayedCommitReason = IMMEDIATE_COMMIT; // Profiling-only
+let pendingSuspendedViewTransitionReason: null | string = null; // Profiling-only
+
+// Use these to prevent an infinite loop of nested updates
+const NESTED_UPDATE_LIMIT = 50;
+let nestedUpdateCount: number = 0;
+let rootWithNestedUpdates: FiberRoot | null = null;
+let isFlushingPassiveEffects = false;
+let didScheduleUpdateDuringPassiveEffects = false;
+
+const NESTED_PASSIVE_UPDATE_LIMIT = 50;
+let nestedPassiveUpdateCount: number = 0;
+let rootWithPassiveNestedUpdates: FiberRoot | null = null;
+
+let isRunningInsertionEffect = false;
+
 // The first setState call that eventually caused the current render.
 let workInProgressUpdateTask: null | ConsoleTask = null;
 
@@ -568,4 +616,55 @@ export function isUnsafeClassRenderPhaseUpdate(fiber: Fiber): boolean {
   // 这个函数只会被类组件调用，因为类组件在 UNSAFE_componentWillReceiveProps
   // 这种已废弃的生命周期里有特殊处理逻辑。
   return (executionContext & RenderContext) !== NoContext;
+}
+
+export function throwIfInfiniteUpdateLoopDetected() {
+  if (nestedUpdateCount > NESTED_UPDATE_LIMIT) {
+    nestedUpdateCount = 0;
+    nestedPassiveUpdateCount = 0;
+    rootWithNestedUpdates = null;
+    rootWithPassiveNestedUpdates = null;
+
+    if (enableInfiniteRenderLoopDetection) {
+      if (executionContext & RenderContext && workInProgressRoot !== null) {
+        // We're in the render phase. Disable the concurrent error recovery
+        // mechanism to ensure that the error we're about to throw gets handled.
+        // We need it to trigger the nearest error boundary so that the infinite
+        // update loop is broken.
+        workInProgressRoot.errorRecoveryDisabledLanes = mergeLanes(
+          workInProgressRoot.errorRecoveryDisabledLanes,
+          workInProgressRootRenderLanes,
+        );
+      }
+    }
+
+    throw new Error(
+      'Maximum update depth exceeded. This can happen when a component ' +
+        'repeatedly calls setState inside componentWillUpdate or ' +
+        'componentDidUpdate. React limits the number of nested updates to ' +
+        'prevent infinite loops.',
+    );
+  }
+
+  if (__DEV__) {
+    if (nestedPassiveUpdateCount > NESTED_PASSIVE_UPDATE_LIMIT) {
+      nestedPassiveUpdateCount = 0;
+      rootWithPassiveNestedUpdates = null;
+
+      console.error(
+        'Maximum update depth exceeded. This can happen when a component ' +
+          "calls setState inside useEffect, but useEffect either doesn't " +
+          'have a dependency array, or one of the dependencies changes on ' +
+          'every render.',
+      );
+    }
+  }
+}
+
+export function scheduleUpdateOnFiber(
+  root: FiberRoot,
+  fiber: Fiber,
+  lane: Lane,
+) {
+  throw new Error('Not implemented yet.');
 }
