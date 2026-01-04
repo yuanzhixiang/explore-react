@@ -15,17 +15,23 @@ import {
   DefaultEventPriority,
 } from 'react-reconciler/src/ReactEventPriorities';
 
-// import ReactDOMSharedInternals from 'shared/ReactDOMSharedInternals';
+import ReactDOMSharedInternals from 'shared/ReactDOMSharedInternals';
 
+// 返回一个 EventPriority
 export function resolveUpdatePriority(): EventPriority {
-  // const updatePriority = ReactDOMSharedInternals.p; /* currentUpdatePriority */
-  // if (updatePriority !== NoEventPriority) {
-  //   return updatePriority;
-  // }
-  // const currentEvent = window.event;
-  // if (currentEvent === undefined) {
-  //   return DefaultEventPriority;
-  // }
-  // return getEventPriority(currentEvent.type);
-  throw new Error('Not implemented');
+  // 读当前更新优先级
+  const updatePriority = ReactDOMSharedInternals.p; /* currentUpdatePriority */
+  // 如果已经有明确的优先级，就直接返回
+  if (updatePriority !== NoEventPriority) {
+    return updatePriority;
+  }
+  // 读取当前浏览器的全局事件对象（同步事件期间可能有值）
+  const currentEvent = window.event;
+
+  // 如果没有事件上下文，返回默认优先级
+  if (currentEvent === undefined) {
+    return DefaultEventPriority;
+  }
+  // 否则根据事件类型（比如 click、input）计算并返回对应优先级。
+  return getEventPriority(currentEvent.type);
 }

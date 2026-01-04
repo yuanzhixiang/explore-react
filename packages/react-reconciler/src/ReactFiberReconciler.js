@@ -185,5 +185,24 @@ export function updateContainer(
 ): Lane {
   const current = container.current;
   const lane = requestUpdateLane(current);
-  throw new Error('Not implemented');
+  updateContainerImpl(
+    current,
+    lane,
+    element,
+    container,
+    parentComponent,
+    callback,
+  );
+  return lane;
+}
+
+function updateContainerImpl(
+  rootFiber: Fiber,
+  lane: Lane,
+  element: ReactNodeList,
+  container: OpaqueRoot,
+  parentComponent: ?component(...props: any),
+  callback: ?Function,
+): void {
+  throw new Error('Not implemented yet.');
 }
