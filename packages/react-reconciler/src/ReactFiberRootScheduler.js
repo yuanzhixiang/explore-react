@@ -293,6 +293,18 @@ function processRootScheduleInMicrotask() {
   if (!hasPendingCommitEffects()) {
     flushSyncWorkAcrossRoots_impl(syncTransitionLanes, false);
   }
+
+  if (currentEventTransitionLane !== NoLane) {
+    // Reset Event Transition Lane so that we allocate a new one next time.
+    currentEventTransitionLane = NoLane;
+    startDefaultTransitionIndicatorIfNeeded();
+  }
+}
+
+function startDefaultTransitionIndicatorIfNeeded() {
+  if (!enableDefaultTransitionIndicator) {
+    return;
+  }
   throw new Error('Not implemented');
 }
 
@@ -483,5 +495,37 @@ function flushSyncWorkAcrossRoots_impl(
   syncTransitionLanes: Lanes | Lane,
   onlyLegacy: boolean,
 ) {
-  throw new Error('Not implemented');
+  if (isFlushingWork) {
+    // Prevent reentrancy.
+    // TODO: Is this overly defensive? The callers must check the execution
+    // context first regardless.
+    return;
+  }
+
+  if (!mightHavePendingSyncWork) {
+    // Fast path. There's no sync work to do.
+    return;
+  }
+
+  // There may or may not be synchronous work scheduled. Let's check.
+  let didPerformSomeWork;
+  isFlushingWork = true;
+  do {
+    didPerformSomeWork = false;
+    let root = firstScheduledRoot;
+    while (root !== null) {
+      if (onlyLegacy && (disableLegacyMode || root.tag !== LegacyRoot)) {
+        // Skip non-legacy roots.
+      } else {
+        if (syncTransitionLanes !== NoLanes) {
+          throw new Error('Not implemented');
+        } else {
+          throw new Error('Not implemented');
+        }
+      }
+      root = root.next;
+    }
+    throw new Error('Not implemented');
+  } while (didPerformSomeWork);
+  isFlushingWork = false;
 }
