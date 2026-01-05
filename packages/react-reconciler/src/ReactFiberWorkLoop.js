@@ -876,3 +876,10 @@ export function isWorkLoopSuspendedOnData(): boolean {
     workInProgressSuspendedReason === SuspendedOnAction
   );
 }
+
+export function hasPendingCommitEffects(): boolean {
+  return (
+    pendingEffectsStatus !== NO_PENDING_EFFECTS &&
+    pendingEffectsStatus !== PENDING_PASSIVE_PHASE
+  );
+}
