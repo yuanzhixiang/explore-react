@@ -123,6 +123,80 @@ export const HydrationLanes =
 
 export const NoTimestamp = -1;
 
+let nextTransitionUpdateLane: Lane = TransitionLane1;
+let nextTransitionDeferredLane: Lane = TransitionLane11;
+let nextRetryLane: Lane = RetryLane1;
+
+function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
+  const pendingSyncLanes = lanes & SyncUpdateLanes;
+  if (pendingSyncLanes !== 0) {
+    return pendingSyncLanes;
+  }
+  switch (getHighestPriorityLane(lanes)) {
+    case SyncHydrationLane:
+      return SyncHydrationLane;
+    case SyncLane:
+      return SyncLane;
+    case InputContinuousHydrationLane:
+      return InputContinuousHydrationLane;
+    case InputContinuousLane:
+      return InputContinuousLane;
+    case DefaultHydrationLane:
+      return DefaultHydrationLane;
+    case DefaultLane:
+      return DefaultLane;
+    case GestureLane:
+      return GestureLane;
+    case TransitionHydrationLane:
+      return TransitionHydrationLane;
+    case TransitionLane1:
+    case TransitionLane2:
+    case TransitionLane3:
+    case TransitionLane4:
+    case TransitionLane5:
+    case TransitionLane6:
+    case TransitionLane7:
+    case TransitionLane8:
+    case TransitionLane9:
+    case TransitionLane10:
+      return lanes & TransitionUpdateLanes;
+    case TransitionLane11:
+    case TransitionLane12:
+    case TransitionLane13:
+    case TransitionLane14:
+      return lanes & TransitionDeferredLanes;
+    case RetryLane1:
+    case RetryLane2:
+    case RetryLane3:
+    case RetryLane4:
+      return lanes & RetryLanes;
+    case SelectiveHydrationLane:
+      return SelectiveHydrationLane;
+    case IdleHydrationLane:
+      return IdleHydrationLane;
+    case IdleLane:
+      return IdleLane;
+    case OffscreenLane:
+      return OffscreenLane;
+    case DeferredLane:
+      // This shouldn't be reachable because deferred work is always entangled
+      // with something else.
+      return NoLanes;
+    default:
+      if (__DEV__) {
+        console.error(
+          'Should have found matching lanes. This is a bug in React.',
+        );
+      }
+      // This shouldn't be reachable, but as a fallback, return the entire bitmask.
+      return lanes;
+  }
+}
+
+export function getHighestPriorityLane(lanes: Lanes): Lane {
+  return lanes & -lanes;
+}
+
 export function createLaneMap<T>(initial: T): LaneMap<T> {
   // Intentionally pushing one by one.
   // https://v8.dev/blog/elements-kinds#avoid-creating-holes
@@ -430,5 +504,43 @@ export function getNextLanes(
   wipLanes: Lanes,
   rootHasPendingCommit: boolean,
 ): Lanes {
+  // Early bailout if there's no pending work left.
+  const pendingLanes = root.pendingLanes;
+  if (pendingLanes === NoLanes) {
+    return NoLanes;
+  }
+
+  let nextLanes: Lanes = NoLanes;
+
+  const suspendedLanes = root.suspendedLanes;
+  const pingedLanes = root.pingedLanes;
+  const warmLanes = root.warmLanes;
+
+  // finishedLanes represents a completed tree that is ready to commit.
+  //
+  // It's not worth doing discarding the completed tree in favor of performing
+  // speculative work. So always check this before deciding to warm up
+  // the siblings.
+  //
+  // Note that this is not set in a "suspend indefinitely" scenario, like when
+  // suspending outside of a Suspense boundary, or in the shell during a
+  // transition — only in cases where we are very likely to commit the tree in
+  // a brief amount of time (i.e. below the "Just Noticeable Difference"
+  // threshold).
+  //
+
+  // Do not work on any idle work until all the non-idle work has finished,
+  // even if the work is suspended.
+  const nonIdlePendingLanes = pendingLanes & NonIdleLanes;
+  if (nonIdlePendingLanes !== NoLanes) {
+    const nonIdleUnblockedLanes = nonIdlePendingLanes & ~suspendedLanes;
+    if (nonIdleUnblockedLanes !== NoLanes) {
+      nextLanes = getHighestPriorityLanes(nonIdleUnblockedLanes);
+    } else {
+      throw new Error('Not implemented');
+    }
+  } else {
+    throw new Error('Not implemented');
+  }
   throw new Error('Not implemented');
 }
