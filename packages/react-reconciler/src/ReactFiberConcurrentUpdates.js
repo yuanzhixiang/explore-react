@@ -51,6 +51,49 @@ let concurrentQueuesIndex = 0;
 
 let concurrentlyUpdatedLanes: Lanes = NoLanes;
 
+export function finishQueueingConcurrentUpdates(): void {
+  const endIndex = concurrentQueuesIndex;
+  concurrentQueuesIndex = 0;
+
+  concurrentlyUpdatedLanes = NoLanes;
+
+  let i = 0;
+  while (i < endIndex) {
+    const fiber: Fiber = concurrentQueues[i];
+    concurrentQueues[i++] = null;
+    const queue: ConcurrentQueue = concurrentQueues[i];
+    concurrentQueues[i++] = null;
+    const update: ConcurrentUpdate = concurrentQueues[i];
+    concurrentQueues[i++] = null;
+    const lane: Lane = concurrentQueues[i];
+    concurrentQueues[i++] = null;
+
+    if (queue !== null && update !== null) {
+      const pending = queue.pending;
+      if (pending === null) {
+        // This is the first update. Create a circular list.
+        update.next = update;
+      } else {
+        update.next = pending.next;
+        pending.next = update;
+      }
+      queue.pending = update;
+    }
+
+    if (lane !== NoLane) {
+      markUpdateLaneFromFiberToRoot(fiber, update, lane);
+    }
+  }
+}
+
+function markUpdateLaneFromFiberToRoot(
+  sourceFiber: Fiber,
+  update: ConcurrentUpdate | null,
+  lane: Lane,
+): null | FiberRoot {
+  throw new Error('Not implemented yet.');
+}
+
 export function enqueueConcurrentClassUpdate<State>(
   fiber: Fiber,
   queue: ClassQueue<State>,

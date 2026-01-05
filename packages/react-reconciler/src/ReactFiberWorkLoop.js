@@ -187,7 +187,7 @@ import {
   // includesIdleGroupLanes,
   includesExpiredLane,
   // getNextLanes,
-  // getEntangledLanes,
+  getEntangledLanes,
   // getLanesToRetrySynchronouslyOnError,
   // upgradePendingLanesToSync,
   // markRootSuspended as _markRootSuspended,
@@ -269,11 +269,11 @@ import {
   // createCapturedValueAtFiber,
   type CapturedValue,
 } from './ReactCapturedValue';
-// import {
-//   enqueueConcurrentRenderForLane,
-//   finishQueueingConcurrentUpdates,
-//   getConcurrentlyUpdatedLanes,
-// } from './ReactFiberConcurrentUpdates';
+import {
+  // enqueueConcurrentRenderForLane,
+  finishQueueingConcurrentUpdates,
+  // getConcurrentlyUpdatedLanes,
+} from './ReactFiberConcurrentUpdates';
 
 // import {
 //   blockingClampTime,
@@ -808,6 +808,24 @@ function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
   workInProgressRootRecoverableErrors = null;
   workInProgressRootDidIncludeRecursiveRenderUpdate = false;
 
+  // Get the lanes that are entangled with whatever we're about to render. We
+  // track these separately so we can distinguish the priority of the render
+  // task from the priority of the lanes it is entangled with. For example, a
+  // transition may not be allowed to finish unless it includes the Sync lane,
+  // which is currently suspended. We should be able to render the Transition
+  // and Sync lane in the same batch, but at Transition priority, because the
+  // Sync lane already suspended.
+  entangledRenderLanes = getEntangledLanes(root, lanes);
+
+  finishQueueingConcurrentUpdates();
+
+  // if (__DEV__) {
+  //   resetOwnerStackLimit();
+
+  //   ReactStrictModeWarnings.discardPendingWarnings();
+  // }
+
+  // return rootWorkInProgress;
   throw new Error('Not implemented yet.');
 }
 

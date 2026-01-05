@@ -661,3 +661,53 @@ export function getTransitionsForLanes(
 
   return transitionsForLanes;
 }
+
+export function getEntangledLanes(root: FiberRoot, renderLanes: Lanes): Lanes {
+  let entangledLanes = renderLanes;
+
+  if ((entangledLanes & InputContinuousLane) !== NoLanes) {
+    // When updates are sync by default, we entangle continuous priority updates
+    // and default updates, so they render in the same batch. The only reason
+    // they use separate lanes is because continuous updates should interrupt
+    // transitions, but default updates should not.
+    entangledLanes |= entangledLanes & DefaultLane;
+  }
+
+  // Check for entangled lanes and add them to the batch.
+  //
+  // A lane is said to be entangled with another when it's not allowed to render
+  // in a batch that does not also include the other lane. Typically we do this
+  // when multiple updates have the same source, and we only want to respond to
+  // the most recent event from that source.
+  //
+  // Note that we apply entanglements *after* checking for partial work above.
+  // This means that if a lane is entangled during an interleaved event while
+  // it's already rendering, we won't interrupt it. This is intentional, since
+  // entanglement is usually "best effort": we'll try our best to render the
+  // lanes in the same batch, but it's not worth throwing out partially
+  // completed work in order to do it.
+  // TODO: Reconsider this. The counter-argument is that the partial work
+  // represents an intermediate state, which we don't want to show to the user.
+  // And by spending extra time finishing it, we're increasing the amount of
+  // time it takes to show the final state, which is what they are actually
+  // waiting for.
+  //
+  // For those exceptions where entanglement is semantically important,
+  // we should ensure that there is no partial work at the
+  // time we apply the entanglement.
+  const allEntangledLanes = root.entangledLanes;
+  if (allEntangledLanes !== NoLanes) {
+    const entanglements = root.entanglements;
+    let lanes = entangledLanes & allEntangledLanes;
+    while (lanes > 0) {
+      const index = pickArbitraryLaneIndex(lanes);
+      const lane = 1 << index;
+
+      entangledLanes |= entanglements[index];
+
+      lanes &= ~lane;
+    }
+  }
+
+  return entangledLanes;
+}
