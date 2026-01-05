@@ -97,8 +97,8 @@ import {
 import {
   // resetAfterCommit,
   // scheduleTimeout,
-  // cancelTimeout,
-  // noTimeout,
+  cancelTimeout,
+  noTimeout,
   // afterActiveInstanceBlur,
   // startSuspendingCommit,
   // suspendOnActiveViewTransition,
@@ -118,7 +118,10 @@ import {
   // flushHydrationEvents,
 } from './ReactFiberConfig';
 
-// import {createWorkInProgress, resetWorkInProgress} from './ReactFiber';
+import {
+  createWorkInProgress,
+  // resetWorkInProgress
+} from './ReactFiber';
 // import {isRootDehydrated} from './ReactFiberShellHydration';
 // import {getIsHydrating} from './ReactFiberHydrationContext';
 import {
@@ -178,11 +181,11 @@ import {
   // includesNonIdleWork,
   // includesOnlyRetries,
   // includesOnlyTransitions,
-  // includesBlockingLane,
+  includesBlockingLane,
   // includesTransitionLane,
   // includesRetryLane,
   // includesIdleGroupLanes,
-  // includesExpiredLane,
+  includesExpiredLane,
   // getNextLanes,
   // getEntangledLanes,
   // getLanesToRetrySynchronouslyOnError,
@@ -194,13 +197,13 @@ import {
   addFiberToLanesMap,
   // movePendingFibersToMemoized,
   // addTransitionToLanesMap,
-  // getTransitionsForLanes,
+  getTransitionsForLanes,
   // includesSomeLane,
   OffscreenLane,
   SyncUpdateLanes,
   UpdateLanes,
   // claimNextTransitionDeferredLane,
-  // checkIfRootIsPrerendering,
+  checkIfRootIsPrerendering,
   // includesOnlyViewTransitionEligibleLanes,
   // isGestureRender,
   GestureLane,
@@ -256,12 +259,12 @@ import {requestCurrentTransition} from './ReactFiberTransition';
 // } from './ReactFiberApplyGesture';
 // import {enqueueUpdate} from './ReactFiberClassUpdateQueue';
 // import {resetContextDependencies} from './ReactFiberNewContext';
-// import {
-//   resetHooksAfterThrow,
-//   resetHooksOnUnwind,
-//   ContextOnlyDispatcher,
-// } from './ReactFiberHooks';
-// import {DefaultAsyncDispatcher} from './ReactFiberAsyncDispatcher';
+import {
+  // resetHooksAfterThrow,
+  // resetHooksOnUnwind,
+  ContextOnlyDispatcher,
+} from './ReactFiberHooks';
+import {DefaultAsyncDispatcher} from './ReactFiberAsyncDispatcher';
 import {
   // createCapturedValueAtFiber,
   type CapturedValue,
@@ -767,6 +770,51 @@ function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
   if (enableProfilerTimer && enableComponentPerformanceTrack) {
     throw new Error('Not implemented yet.');
   }
+
+  const timeoutHandle = root.timeoutHandle;
+  if (timeoutHandle !== noTimeout) {
+    // The root previous suspended and scheduled a timeout to commit a fallback
+    // state. Now that we have additional work, cancel the timeout.
+    root.timeoutHandle = noTimeout;
+    // $FlowFixMe[incompatible-call] Complains noTimeout is not a TimeoutID, despite the check above
+    cancelTimeout(timeoutHandle);
+  }
+  const cancelPendingCommit = root.cancelPendingCommit;
+  if (cancelPendingCommit !== null) {
+    root.cancelPendingCommit = null;
+    cancelPendingCommit();
+  }
+
+  pendingEffectsLanes = NoLanes;
+
+  resetWorkInProgressStack();
+  workInProgressRoot = root;
+  const rootWorkInProgress = createWorkInProgress(root.current, null);
+  workInProgress = rootWorkInProgress;
+  workInProgressRootRenderLanes = lanes;
+  workInProgressSuspendedReason = NotSuspended;
+  workInProgressThrownValue = null;
+  workInProgressRootDidSkipSuspendedSiblings = false;
+  workInProgressRootIsPrerendering = checkIfRootIsPrerendering(root, lanes);
+  workInProgressRootDidAttachPingListener = false;
+  workInProgressRootExitStatus = RootInProgress;
+  workInProgressRootSkippedLanes = NoLanes;
+  workInProgressRootInterleavedUpdatedLanes = NoLanes;
+  workInProgressRootRenderPhaseUpdatedLanes = NoLanes;
+  workInProgressRootPingedLanes = NoLanes;
+  workInProgressDeferredLane = NoLane;
+  workInProgressSuspendedRetryLanes = NoLanes;
+  workInProgressRootConcurrentErrors = null;
+  workInProgressRootRecoverableErrors = null;
+  workInProgressRootDidIncludeRecursiveRenderUpdate = false;
+
+  throw new Error('Not implemented yet.');
+}
+
+function resetWorkInProgressStack() {
+  if (workInProgress === null) {
+    return;
+  }
   throw new Error('Not implemented yet.');
 }
 
@@ -967,5 +1015,92 @@ export function performWorkOnRoot(
     throw new Error('Not implemented yet.');
   }
 
+  // We disable time-slicing in some cases: if the work has been CPU-bound
+  // for too long ("expired" work, to prevent starvation), or we're in
+  // sync-updates-by-default mode.
+  const shouldTimeSlice =
+    (!forceSync &&
+      !includesBlockingLane(lanes) &&
+      !includesExpiredLane(root, lanes)) ||
+    // If we're prerendering, then we should use the concurrent work loop
+    // even if the lanes are synchronous, so that prerendering never blocks
+    // the main thread.
+    // TODO: We should consider doing this whenever a sync lane is suspended,
+    // even for regular pings.
+    checkIfRootIsPrerendering(root, lanes);
+
+  let exitStatus: RootExitStatus = shouldTimeSlice
+    ? renderRootConcurrent(root, lanes)
+    : renderRootSync(root, lanes, true);
+
+  let renderWasConcurrent = shouldTimeSlice;
+
   throw new Error('Not implemented yet.');
+}
+
+function renderRootConcurrent(root: FiberRoot, lanes: Lanes): RootExitStatus {
+  throw new Error('Not implemented yet.');
+}
+
+// TODO: Over time, this function and renderRootConcurrent have become more
+// and more similar. Not sure it makes sense to maintain forked paths. Consider
+// unifying them again.
+function renderRootSync(
+  root: FiberRoot,
+  lanes: Lanes,
+  shouldYieldForPrerendering: boolean,
+): RootExitStatus {
+  // 保存当前的执行上下文
+  // executionContext 标记 React 当前处于什么阶段（渲染中、提交中、批处理中等）
+  const prevExecutionContext = executionContext;
+  // 用位运算 |= 把 RenderContext 标记加入当前上下文
+  // 这样其他代码可以通过检查 executionContext & RenderContext 知道当前正在渲染中
+  executionContext |= RenderContext;
+  // 设置 Hooks dispatcher（上一个问题讲过），返回之前的 dispatcher 用于之后恢复
+  const prevDispatcher = pushDispatcher(root.containerInfo);
+  const prevAsyncDispatcher = pushAsyncDispatcher();
+
+  // If the root or lanes have changed, throw out the existing stack
+  // and prepare a fresh one. Otherwise we'll continue where we left off.
+  if (workInProgressRoot !== root || workInProgressRootRenderLanes !== lanes) {
+    if (enableUpdaterTracking) {
+      if (isDevToolsPresent) {
+        throw new Error('Not implemented yet.');
+      }
+    }
+
+    workInProgressTransitions = getTransitionsForLanes(root, lanes);
+    prepareFreshStack(root, lanes);
+  }
+
+  throw new Error('Not implemented yet.');
+}
+
+// 这个函数用于设置 Hooks 的 dispatcher，在渲染开始前调用
+// 函数名 push 暗示是入栈操作，会保存之前的状态以便之后恢复
+function pushDispatcher(container: any) {
+  // 保存当前的 dispatcher 引用
+  // ReactSharedInternals.H 就是 Hooks 的实现（H 代表 Hooks）
+  const prevDispatcher = ReactSharedInternals.H;
+  // 设置为 ContextOnlyDispatcher。
+  // 这是一个特殊的 dispatcher，只允许读取 Context，其他 Hooks 调用会报错
+  ReactSharedInternals.H = ContextOnlyDispatcher;
+
+  // 如果之前没有 dispatcher（null），返回 ContextOnlyDispatcher
+  if (prevDispatcher === null) {
+    // The React isomorphic package does not include a default dispatcher.
+    // Instead the first renderer will lazily attach one, in order to give
+    // nicer error messages.
+    return ContextOnlyDispatcher;
+  }
+  // 如果之前有 dispatcher，返回它（用于之后恢复）
+  else {
+    return prevDispatcher;
+  }
+}
+
+function pushAsyncDispatcher() {
+  const prevAsyncDispatcher = ReactSharedInternals.A;
+  ReactSharedInternals.A = DefaultAsyncDispatcher;
+  return prevAsyncDispatcher;
 }

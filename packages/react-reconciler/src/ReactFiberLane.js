@@ -572,18 +572,25 @@ export function includesSyncLane(lanes: Lanes): boolean {
   return (lanes & (SyncLane | SyncHydrationLane)) !== NoLanes;
 }
 
+// 接收 root 和当前渲染的 renderLanes，返回是否是预渲染
 export function checkIfRootIsPrerendering(
   root: FiberRoot,
   renderLanes: Lanes,
 ): boolean {
+  // 获取所有待处理的 lanes（有更新等待执行）
   const pendingLanes = root.pendingLanes;
+  // 获取被挂起的 lanes（因为 Suspense 等待数据）
   const suspendedLanes = root.suspendedLanes;
+  // 获取被唤醒的 lanes（数据回来了，可以继续渲染）
   const pingedLanes = root.pingedLanes;
   // Remove lanes that are suspended (but not pinged)
+  // unblockedLanes = 待处理的 - 真正被挂起的
   const unblockedLanes = pendingLanes & ~(suspendedLanes & ~pingedLanes);
 
   // If there are no unsuspended or pinged lanes, that implies that we're
   // performing a prerender.
+  // 检查当前渲染的 lanes 是否在未被阻塞的集合中。
+  // 如果结果是 0，说明当前渲染的 lanes 全都是被挂起的，这就是预渲染
   return (unblockedLanes & renderLanes) === 0;
 }
 
@@ -593,4 +600,64 @@ export function isGestureRender(lanes: Lanes): boolean {
   }
   // This should render only the one lane.
   return lanes === GestureLane;
+}
+
+// 这个函数用于判断 lanes 中是否包含阻塞性的 lane
+export function includesBlockingLane(lanes: Lanes): boolean {
+  const SyncDefaultLanes =
+    // 同步 hydration（SSR 注水）
+    SyncHydrationLane |
+    // 同步更新（如 flushSync）
+    SyncLane |
+    // 连续输入的 hydration
+    InputContinuousHydrationLane |
+    // 连续输入（如拖拽、滚动）
+    InputContinuousLane |
+    // 默认 hydration
+    DefaultHydrationLane |
+    // 默认更新（普通 setState）
+    DefaultLane |
+    // 手势相关
+    GestureLane;
+  // 位运算 & 检查 lanes 和 SyncDefaultLanes 是否有交集。有交集就返回 true
+  return (lanes & SyncDefaultLanes) !== NoLanes;
+}
+
+// 这个函数用于判断 lanes 中是否包含已过期的 lane
+export function includesExpiredLane(root: FiberRoot, lanes: Lanes): boolean {
+  // 这个检查和 includesBlockingLane 是分开的，因为 lane 可能在渲染开始后才过期
+  // This is a separate check from includesBlockingLane because a lane can
+  // expire after a render has already started.
+
+  // 用位运算检查 lanes 和 root.expiredLanes 是否有交集
+  return (lanes & root.expiredLanes) !== NoLanes;
+}
+
+export function getTransitionsForLanes(
+  root: FiberRoot,
+  lanes: Lane | Lanes,
+): Array<Transition> | null {
+  if (!enableTransitionTracing) {
+    return null;
+  }
+
+  const transitionsForLanes = [];
+  while (lanes > 0) {
+    const index = laneToIndex(lanes);
+    const lane = 1 << index;
+    const transitions = root.transitionLanes[index];
+    if (transitions !== null) {
+      transitions.forEach(transition => {
+        transitionsForLanes.push(transition);
+      });
+    }
+
+    lanes &= ~lane;
+  }
+
+  if (transitionsForLanes.length === 0) {
+    return null;
+  }
+
+  return transitionsForLanes;
 }

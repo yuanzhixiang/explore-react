@@ -332,3 +332,101 @@ export function createHostRootFiber(
 
   return createFiber(HostRoot, null, null, mode);
 }
+
+// This is used to create an alternate fiber to do work on.
+export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
+  let workInProgress = current.alternate;
+  if (workInProgress === null) {
+    // We use a double buffering pooling technique because we know that we'll
+    // only ever need at most two versions of a tree. We pool the "other" unused
+    // node that we're free to reuse. This is lazily created to avoid allocating
+    // extra objects for things that are never updated. It also allow us to
+    // reclaim the extra memory if needed.
+    workInProgress = createFiber(
+      current.tag,
+      pendingProps,
+      current.key,
+      current.mode,
+    );
+    workInProgress.elementType = current.elementType;
+    workInProgress.type = current.type;
+    workInProgress.stateNode = current.stateNode;
+
+    if (__DEV__) {
+      // DEV-only fields
+
+      workInProgress._debugOwner = current._debugOwner;
+      workInProgress._debugStack = current._debugStack;
+      workInProgress._debugTask = current._debugTask;
+      workInProgress._debugHookTypes = current._debugHookTypes;
+    }
+
+    workInProgress.alternate = current;
+    current.alternate = workInProgress;
+  } else {
+    throw new Error('Not implemented yet.');
+  }
+
+  // Reset all effects except static ones.
+  // Static effects are not specific to a render.
+  workInProgress.flags = current.flags & StaticMask;
+  workInProgress.childLanes = current.childLanes;
+  workInProgress.lanes = current.lanes;
+
+  workInProgress.child = current.child;
+  workInProgress.memoizedProps = current.memoizedProps;
+  workInProgress.memoizedState = current.memoizedState;
+  workInProgress.updateQueue = current.updateQueue;
+
+  // Clone the dependencies object. This is mutated during the render phase, so
+  // it cannot be shared with the current fiber.
+  const currentDependencies = current.dependencies;
+  workInProgress.dependencies =
+    currentDependencies === null
+      ? null
+      : __DEV__
+        ? {
+            lanes: currentDependencies.lanes,
+            firstContext: currentDependencies.firstContext,
+            _debugThenableState: currentDependencies._debugThenableState,
+          }
+        : {
+            lanes: currentDependencies.lanes,
+            firstContext: currentDependencies.firstContext,
+          };
+
+  // These will be overridden during the parent's reconciliation
+  workInProgress.sibling = current.sibling;
+  workInProgress.index = current.index;
+  workInProgress.ref = current.ref;
+  workInProgress.refCleanup = current.refCleanup;
+
+  if (enableProfilerTimer) {
+    workInProgress.selfBaseDuration = current.selfBaseDuration;
+    workInProgress.treeBaseDuration = current.treeBaseDuration;
+  }
+
+  if (__DEV__) {
+    workInProgress._debugInfo = current._debugInfo;
+    workInProgress._debugNeedsRemount = current._debugNeedsRemount;
+    switch (workInProgress.tag) {
+      case FunctionComponent:
+      case SimpleMemoComponent:
+        // workInProgress.type = resolveFunctionForHotReloading(current.type);
+        // break;
+        throw new Error('Not implemented yet.');
+      case ClassComponent:
+        // workInProgress.type = resolveClassForHotReloading(current.type);
+        // break;
+        throw new Error('Not implemented yet.');
+      case ForwardRef:
+        // workInProgress.type = resolveForwardRefForHotReloading(current.type);
+        // break;
+        throw new Error('Not implemented yet.');
+      default:
+        break;
+    }
+  }
+
+  return workInProgress;
+}
