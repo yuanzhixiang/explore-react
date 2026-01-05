@@ -633,6 +633,10 @@ export function includesExpiredLane(root: FiberRoot, lanes: Lanes): boolean {
   return (lanes & root.expiredLanes) !== NoLanes;
 }
 
+export function includesSomeLane(a: Lanes | Lane, b: Lanes | Lane): boolean {
+  return (a & b) !== NoLanes;
+}
+
 export function getTransitionsForLanes(
   root: FiberRoot,
   lanes: Lane | Lanes,

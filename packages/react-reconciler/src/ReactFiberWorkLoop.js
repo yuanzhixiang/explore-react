@@ -219,11 +219,11 @@ import {
   eventPriorityToLane,
 } from './ReactEventPriorities';
 import {requestCurrentTransition} from './ReactFiberTransition';
-// import {
-//   SelectiveHydrationException,
-//   beginWork,
-//   replayFunctionComponent,
-// } from './ReactFiberBeginWork';
+import {
+  SelectiveHydrationException,
+  beginWork,
+  // replayFunctionComponent,
+} from './ReactFiberBeginWork';
 // import {completeWork} from './ReactFiberCompleteWork';
 // import {unwindWork, unwindInterruptedWork} from './ReactFiberUnwindWork';
 // import {
@@ -347,11 +347,11 @@ import {
 // // DEV stuff
 // import getComponentNameFromFiber from 'react-reconciler/src/getComponentNameFromFiber';
 import ReactStrictModeWarnings from './ReactStrictModeWarnings';
-// import {
-//   isRendering as ReactCurrentDebugFiberIsRenderingInDEV,
-//   resetCurrentFiber,
-//   runWithFiberInDEV,
-// } from './ReactCurrentFiber';
+import {
+  isRendering as ReactCurrentDebugFiberIsRenderingInDEV,
+  // resetCurrentFiber,
+  runWithFiberInDEV,
+} from './ReactCurrentFiber';
 import {
   isDevToolsPresent,
   // markCommitStarted,
@@ -1092,6 +1092,67 @@ function renderRootSync(
 
   if (enableSchedulingProfiler) {
     markRenderStarted(lanes);
+  }
+
+  let didSuspendInShell = false;
+  let exitStatus = workInProgressRootExitStatus;
+
+  outer: do {
+    try {
+      if (
+        workInProgressSuspendedReason !== NotSuspended &&
+        workInProgress !== null
+      ) {
+        throw new Error('Not implemented yet.');
+      }
+      workLoopSync();
+      exitStatus = workInProgressRootExitStatus;
+      break;
+    } catch (thrownValue) {
+      handleThrow(root, thrownValue);
+    }
+  } while (true);
+  throw new Error('Not implemented yet.');
+}
+
+function handleThrow(root: FiberRoot, thrownValue: any): void {
+  throw new Error('Not implemented yet.');
+}
+
+// The work loop is an extremely hot path. Tell Closure not to inline it.
+/** @noinline */
+function workLoopSync() {
+  // Perform work without checking if we need to yield between fiber.
+  while (workInProgress !== null) {
+    performUnitOfWork(workInProgress);
+  }
+}
+
+function performUnitOfWork(unitOfWork: Fiber): void {
+  // unitOfWork 的 alternate 就是当前已经渲染到屏幕上的 Fiber
+  // 理想情况下不应该依赖这个关系，但这样做可以避免在 work-in-progress 上增加额外字段
+  // The current, flushed, state of this fiber is the alternate. Ideally
+  // nothing should rely on this, but relying on it here means that we don't
+  // need an additional field on the work in progress.
+
+  // unitOfWork 是正在处理的 work-in-progress Fiber，它的 alternate 指向 current Fiber（已渲染的）
+  const current = unitOfWork.alternate;
+
+  let next;
+  if (enableProfilerTimer && (unitOfWork.mode & ProfileMode) !== NoMode) {
+    throw new Error('Not implemented yet.');
+  } else {
+    if (__DEV__) {
+      next = runWithFiberInDEV(
+        unitOfWork,
+        beginWork,
+        current,
+        unitOfWork,
+        entangledRenderLanes,
+      );
+    } else {
+      throw new Error('Not implemented yet.');
+    }
   }
   throw new Error('Not implemented yet.');
 }

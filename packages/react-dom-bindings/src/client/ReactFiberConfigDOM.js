@@ -89,16 +89,16 @@ import {
 // import {hydrateSelect} from './ReactDOMSelect';
 // import {getSelectionInformation, restoreSelection} from './ReactInputSelection';
 // import setTextContent from './setTextContent';
-// import {
-//   validateDOMNesting,
-//   validateTextNesting,
-//   updatedAncestorInfoDev,
-// } from './validateDOMNesting';
+import {
+  // validateDOMNesting,
+  // validateTextNesting,
+  updatedAncestorInfoDev,
+} from './validateDOMNesting';
 // import {
 //   isEnabled as ReactBrowserEventEmitterIsEnabled,
 //   setEnabled as ReactBrowserEventEmitterSetEnabled,
 // } from '../events/ReactDOMEventListener';
-// import {SVG_NAMESPACE, MATH_NAMESPACE} from './DOMNamespaces';
+import {SVG_NAMESPACE, MATH_NAMESPACE} from './DOMNamespaces';
 import {
   ELEMENT_NODE,
   TEXT_NODE,
@@ -373,4 +373,73 @@ function handleErrorInNextTick(error: any) {
 let schedulerEvent: void | Event = undefined;
 export function trackSchedulerEvent(): void {
   schedulerEvent = window.event;
+}
+
+export function getRootHostContext(
+  rootContainerInstance: Container,
+): HostContext {
+  let type;
+  let context: HostContextProd;
+  const nodeType = rootContainerInstance.nodeType;
+  switch (nodeType) {
+    case DOCUMENT_NODE:
+    case DOCUMENT_FRAGMENT_NODE: {
+      throw new Error('Not implemented yet.');
+    }
+    default: {
+      const container: any =
+        !disableCommentsAsDOMContainers && nodeType === COMMENT_NODE
+          ? rootContainerInstance.parentNode
+          : rootContainerInstance;
+      type = container.tagName;
+      const namespaceURI = container.namespaceURI;
+      if (!namespaceURI) {
+        throw new Error('Not implemented yet.');
+      } else {
+        const ownContext = getOwnHostContext(namespaceURI);
+        context = getChildHostContextProd(ownContext, type);
+      }
+      break;
+    }
+  }
+  if (__DEV__) {
+    const validatedTag = type.toLowerCase();
+    const ancestorInfo = updatedAncestorInfoDev(null, validatedTag);
+    return {context, ancestorInfo};
+  }
+  return context;
+}
+
+function getOwnHostContext(namespaceURI: string): HostContextNamespace {
+  switch (namespaceURI) {
+    case SVG_NAMESPACE:
+      return HostContextNamespaceSvg;
+    case MATH_NAMESPACE:
+      return HostContextNamespaceMath;
+    default:
+      return HostContextNamespaceNone;
+  }
+}
+
+function getChildHostContextProd(
+  parentNamespace: HostContextNamespace,
+  type: string,
+): HostContextNamespace {
+  if (parentNamespace === HostContextNamespaceNone) {
+    // No (or default) parent namespace: potential entry point.
+    switch (type) {
+      case 'svg':
+        return HostContextNamespaceSvg;
+      case 'math':
+        return HostContextNamespaceMath;
+      default:
+        return HostContextNamespaceNone;
+    }
+  }
+  if (parentNamespace === HostContextNamespaceSvg && type === 'foreignObject') {
+    // We're leaving SVG.
+    return HostContextNamespaceNone;
+  }
+  // By default, pass namespace below.
+  return parentNamespace;
 }

@@ -430,3 +430,15 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
 
   return workInProgress;
 }
+
+// TODO: Get rid of this helper. Only createFiberFromElement should exist.
+export function createFiberFromTypeAndProps(
+  type: any, // React$ElementType
+  key: ReactKey,
+  pendingProps: any,
+  owner: null | ReactComponentInfo | Fiber,
+  mode: TypeOfMode,
+  lanes: Lanes,
+): Fiber {
+  throw new Error('Not implemented yet.');
+}
