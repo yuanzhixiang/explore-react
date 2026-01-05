@@ -423,6 +423,10 @@ export function markStarvedLanesAsExpired(
   }
 }
 
+export function includesNonIdleWork(lanes: Lanes): boolean {
+  return (lanes & NonIdleLanes) !== NoLanes;
+}
+
 export function isTransitionLane(lane: Lane): boolean {
   // TransitionLanes 是过渡更新
   // 通过 startTransition / useTransition 产生的更新会落在这些 lanes 里
@@ -542,5 +546,51 @@ export function getNextLanes(
   } else {
     throw new Error('Not implemented');
   }
-  throw new Error('Not implemented');
+
+  if (nextLanes === NoLanes) {
+    // This should only be reachable if we're suspended
+    // TODO: Consider warning in this path if a fallback timer is not scheduled.
+    return NoLanes;
+  }
+
+  // If we're already in the middle of a render, switching lanes will interrupt
+  // it and we'll lose our progress. We should only do this if the new lanes are
+  // higher priority.
+  if (
+    wipLanes !== NoLanes &&
+    wipLanes !== nextLanes &&
+    // If we already suspended with a delay, then interrupting is fine. Don't
+    // bother waiting until the root is complete.
+    (wipLanes & suspendedLanes) === NoLanes
+  ) {
+    throw new Error('Not implemented');
+  }
+  return nextLanes;
+}
+
+export function includesSyncLane(lanes: Lanes): boolean {
+  return (lanes & (SyncLane | SyncHydrationLane)) !== NoLanes;
+}
+
+export function checkIfRootIsPrerendering(
+  root: FiberRoot,
+  renderLanes: Lanes,
+): boolean {
+  const pendingLanes = root.pendingLanes;
+  const suspendedLanes = root.suspendedLanes;
+  const pingedLanes = root.pingedLanes;
+  // Remove lanes that are suspended (but not pinged)
+  const unblockedLanes = pendingLanes & ~(suspendedLanes & ~pingedLanes);
+
+  // If there are no unsuspended or pinged lanes, that implies that we're
+  // performing a prerender.
+  return (unblockedLanes & renderLanes) === 0;
+}
+
+export function isGestureRender(lanes: Lanes): boolean {
+  if (!enableGestureTransition) {
+    return false;
+  }
+  // This should render only the one lane.
+  return lanes === GestureLane;
 }

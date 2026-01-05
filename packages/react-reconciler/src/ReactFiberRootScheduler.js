@@ -27,14 +27,14 @@ import {
   NoLanes,
   SyncLane,
   DefaultLane,
-  // getHighestPriorityLane,
+  getHighestPriorityLane,
   getNextLanes,
-  // includesSyncLane,
+  includesSyncLane,
   markStarvedLanesAsExpired,
   // claimNextTransitionUpdateLane,
   // getNextLanesToFlushSync,
-  // checkIfRootIsPrerendering,
-  // isGestureRender,
+  checkIfRootIsPrerendering,
+  isGestureRender,
 } from './ReactFiberLane';
 import {
   CommitContext,
@@ -48,7 +48,7 @@ import {
   getRootWithPendingPassiveEffects,
   getPendingPassiveEffectsLanes,
   // hasPendingCommitEffects,
-  // isWorkLoopSuspendedOnData,
+  isWorkLoopSuspendedOnData,
   // performWorkOnRoot,
 } from './ReactFiberWorkLoop';
 import {LegacyRoot} from './ReactRootTags';
@@ -58,7 +58,7 @@ import {
   NormalPriority as NormalSchedulerPriority,
   IdlePriority as IdleSchedulerPriority,
   // cancelCallback as Scheduler_cancelCallback,
-  // scheduleCallback as Scheduler_scheduleCallback,
+  scheduleCallback as Scheduler_scheduleCallback,
   now,
 } from './Scheduler';
 import {
@@ -66,7 +66,7 @@ import {
   ContinuousEventPriority,
   DefaultEventPriority,
   IdleEventPriority,
-  // lanesToEventPriority,
+  lanesToEventPriority,
 } from './ReactEventPriorities';
 import {
   supportsMicrotasks,
@@ -257,7 +257,30 @@ function processRootScheduleInMicrotask() {
     if (nextLanes === NoLane) {
       throw new Error('Not implemented');
     } else {
-      throw new Error('Not implemented');
+      // This root still has work. Keep it in the list.
+      // 保留这个 root 在链表中，因为它还有待处理的工作
+      prev = root;
+
+      // This is a fast-path optimization to early exit from
+      // flushSyncWorkOnAllRoots if we can be certain that there is no remaining
+      // synchronous work to perform. Set this to true if there might be sync
+      // work left.
+      if (
+        // Skip the optimization if syncTransitionLanes is set
+        // 有 transition 被当作同步处理
+        syncTransitionLanes !== NoLanes ||
+        // Common case: we're not treating any extra lanes as synchronous, so we
+        // can just check if the next lanes are sync.
+        // 下一个要处理的 lanes 包含同步优先级
+        includesSyncLane(nextLanes) ||
+        // 是手势渲染（需要同步响应）
+        (enableGestureTransition && isGestureRender(nextLanes))
+      ) {
+        // mightHavePendingSyncWork 优化 - 这是一个快速路径优化标志：
+        // - 用于 flushSyncWorkOnAllRoots 函数提前退出
+        // - 如果能确定没有同步工作需要执行，就可以跳过不必要的遍历
+        mightHavePendingSyncWork = true;
+      }
     }
   }
   throw new Error('Not implemented');
@@ -332,5 +355,116 @@ function scheduleTaskForRootDuringMicrotask(
         );
 
   const existingCallbackNode = root.callbackNode;
+
+  if (
+    // Check if there's nothing to work on
+    nextLanes === NoLanes ||
+    // If this root is currently suspended and waiting for data to resolve, don't
+    // schedule a task to render it. We'll either wait for a ping, or wait to
+    // receive an update.
+    //
+    // Suspended render phase
+    (root === workInProgressRoot && isWorkLoopSuspendedOnData()) ||
+    // Suspended commit phase
+    root.cancelPendingCommit !== null
+  ) {
+    throw new Error('Not implemented');
+  }
+
+  // Schedule a new callback in the host environment.
+  if (
+    includesSyncLane(nextLanes) &&
+    // If we're prerendering, then we should use the concurrent work loop
+    // even if the lanes are synchronous, so that prerendering never blocks
+    // the main thread.
+    !checkIfRootIsPrerendering(root, nextLanes)
+  ) {
+    throw new Error('Not implemented');
+  } else {
+    // We use the highest priority lane to represent the priority of the callback.
+    const existingCallbackPriority = root.callbackPriority;
+    const newCallbackPriority = getHighestPriorityLane(nextLanes);
+
+    if (
+      newCallbackPriority === existingCallbackPriority &&
+      // Special case related to `act`. If the currently scheduled task is a
+      // Scheduler task, rather than an `act` task, cancel it and re-schedule
+      // on the `act` queue.
+      !(
+        __DEV__ &&
+        ReactSharedInternals.actQueue !== null &&
+        existingCallbackNode !== fakeActCallbackNode
+      )
+    ) {
+      // The priority hasn't changed. We can reuse the existing task.
+      return newCallbackPriority;
+    } else {
+      // Cancel the existing callback. We'll schedule a new one below.
+      cancelCallback(existingCallbackNode);
+    }
+
+    let schedulerPriorityLevel;
+    switch (lanesToEventPriority(nextLanes)) {
+      // Scheduler does have an "ImmediatePriority", but now that we use
+      // microtasks for sync work we no longer use that. Any sync work that
+      // reaches this path is meant to be time sliced.
+      case DiscreteEventPriority:
+      case ContinuousEventPriority:
+        schedulerPriorityLevel = UserBlockingSchedulerPriority;
+        break;
+      case DefaultEventPriority:
+        schedulerPriorityLevel = NormalSchedulerPriority;
+        break;
+      case IdleEventPriority:
+        schedulerPriorityLevel = IdleSchedulerPriority;
+        break;
+      default:
+        schedulerPriorityLevel = NormalSchedulerPriority;
+        break;
+    }
+
+    const newCallbackNode = scheduleCallback(
+      schedulerPriorityLevel,
+      performWorkOnRootViaSchedulerTask.bind(null, root),
+    );
+
+    root.callbackPriority = newCallbackPriority;
+    root.callbackNode = newCallbackNode;
+    return newCallbackPriority;
+  }
+}
+
+function cancelCallback(callbackNode: mixed) {
+  if (__DEV__ && callbackNode === fakeActCallbackNode) {
+    // Special `act` case: check if this is the fake callback node used by
+    // the `act` implementation.
+  } else if (callbackNode !== null) {
+    throw new Error('Not implemented');
+  }
+}
+
+type RenderTaskFn = (didTimeout: boolean) => RenderTaskFn | null;
+
+function performWorkOnRootViaSchedulerTask(
+  root: FiberRoot,
+  didTimeout: boolean,
+): RenderTaskFn | null {
   throw new Error('Not implemented');
+}
+
+const fakeActCallbackNode = {};
+
+function scheduleCallback(
+  priorityLevel: PriorityLevel,
+  callback: RenderTaskFn,
+) {
+  if (__DEV__ && ReactSharedInternals.actQueue !== null) {
+    // Special case: We're inside an `act` scope (a testing utility).
+    // Instead of scheduling work in the host environment, add it to a
+    // fake internal queue that's managed by the `act` implementation.
+    ReactSharedInternals.actQueue.push(callback);
+    return fakeActCallbackNode;
+  } else {
+    return Scheduler_scheduleCallback(priorityLevel, callback);
+  }
 }
