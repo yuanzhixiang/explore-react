@@ -51,12 +51,16 @@ let concurrentQueuesIndex = 0;
 
 let concurrentlyUpdatedLanes: Lanes = NoLanes;
 
+// 完成并发更新的入队操作
 export function finishQueueingConcurrentUpdates(): void {
+  // 保存当前队列的结束索引，然后重置为 0（为下一批更新准备）
   const endIndex = concurrentQueuesIndex;
   concurrentQueuesIndex = 0;
 
+  // 重置并发更新的 lanes 标记
   concurrentlyUpdatedLanes = NoLanes;
 
+  // 遍历队列中所有暂存的更新
   let i = 0;
   while (i < endIndex) {
     const fiber: Fiber = concurrentQueues[i];
@@ -68,6 +72,7 @@ export function finishQueueingConcurrentUpdates(): void {
     const lane: Lane = concurrentQueues[i];
     concurrentQueues[i++] = null;
 
+    // 把 update 插入循环链表
     if (queue !== null && update !== null) {
       const pending = queue.pending;
       if (pending === null) {
@@ -86,12 +91,36 @@ export function finishQueueingConcurrentUpdates(): void {
   }
 }
 
+// 这个函数的作用是从触发更新的 Fiber 向上遍历到 Root，沿途标记所有祖先节点的 childLanes
 function markUpdateLaneFromFiberToRoot(
   sourceFiber: Fiber,
   update: ConcurrentUpdate | null,
   lane: Lane,
 ): null | FiberRoot {
-  throw new Error('Not implemented yet.');
+  // Update the source fiber's lanes
+  sourceFiber.lanes = mergeLanes(sourceFiber.lanes, lane);
+  let alternate = sourceFiber.alternate;
+  if (alternate !== null) {
+    alternate.lanes = mergeLanes(alternate.lanes, lane);
+  }
+  // Walk the parent path to the root and update the child lanes.
+  let isHidden = false;
+  let parent = sourceFiber.return;
+  let node = sourceFiber;
+
+  while (parent !== null) {
+    throw new Error('Not implemented yet.');
+  }
+
+  if (node.tag === HostRoot) {
+    const root: FiberRoot = node.stateNode;
+    if (isHidden && update !== null) {
+      // markHiddenUpdate(root, update, lane);
+      throw new Error('Not implemented yet.');
+    }
+    return root;
+  }
+  return null;
 }
 
 export function enqueueConcurrentClassUpdate<State>(

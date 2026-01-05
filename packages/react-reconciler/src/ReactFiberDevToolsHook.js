@@ -75,3 +75,14 @@ export function markRenderScheduled(lane: Lane): void {
     }
   }
 }
+
+export function markRenderStarted(lanes: Lanes): void {
+  if (enableSchedulingProfiler) {
+    if (
+      injectedProfilingHooks !== null &&
+      typeof injectedProfilingHooks.markRenderStarted === 'function'
+    ) {
+      injectedProfilingHooks.markRenderStarted(lanes);
+    }
+  }
+}

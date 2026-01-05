@@ -54,7 +54,7 @@ import {
   enableGestureTransition,
   enableDefaultTransitionIndicator,
 } from 'shared/ReactFeatureFlags';
-// import {resetOwnerStackLimit} from 'shared/ReactOwnerStackReset';
+import {resetOwnerStackLimit} from 'shared/ReactOwnerStackReset';
 import ReactSharedInternals from 'shared/ReactSharedInternals';
 // import is from 'shared/objectIs';
 
@@ -346,7 +346,7 @@ import {
 
 // // DEV stuff
 // import getComponentNameFromFiber from 'react-reconciler/src/getComponentNameFromFiber';
-// import ReactStrictModeWarnings from './ReactStrictModeWarnings';
+import ReactStrictModeWarnings from './ReactStrictModeWarnings';
 // import {
 //   isRendering as ReactCurrentDebugFiberIsRenderingInDEV,
 //   resetCurrentFiber,
@@ -363,7 +363,7 @@ import {
   // markLayoutEffectsStopped,
   // markPassiveEffectsStarted,
   // markPassiveEffectsStopped,
-  // markRenderStarted,
+  markRenderStarted,
   // markRenderYielded,
   // markRenderStopped,
   // onCommitRoot as onCommitRootDevTools,
@@ -819,14 +819,13 @@ function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
 
   finishQueueingConcurrentUpdates();
 
-  // if (__DEV__) {
-  //   resetOwnerStackLimit();
+  if (__DEV__) {
+    resetOwnerStackLimit();
 
-  //   ReactStrictModeWarnings.discardPendingWarnings();
-  // }
+    ReactStrictModeWarnings.discardPendingWarnings();
+  }
 
-  // return rootWorkInProgress;
-  throw new Error('Not implemented yet.');
+  return rootWorkInProgress;
 }
 
 function resetWorkInProgressStack() {
@@ -1091,6 +1090,9 @@ function renderRootSync(
     prepareFreshStack(root, lanes);
   }
 
+  if (enableSchedulingProfiler) {
+    markRenderStarted(lanes);
+  }
   throw new Error('Not implemented yet.');
 }
 
