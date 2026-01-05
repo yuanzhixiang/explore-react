@@ -41,7 +41,7 @@ import {
   NoContext,
   RenderContext,
   // flushPendingEffects,
-  // flushPendingEffectsDelayed,
+  flushPendingEffectsDelayed,
   getExecutionContext,
   getWorkInProgressRoot,
   getWorkInProgressRootRenderLanes,
@@ -49,7 +49,7 @@ import {
   getPendingPassiveEffectsLanes,
   hasPendingCommitEffects,
   isWorkLoopSuspendedOnData,
-  // performWorkOnRoot,
+  performWorkOnRoot,
 } from './ReactFiberWorkLoop';
 import {LegacyRoot} from './ReactRootTags';
 import {
@@ -486,6 +486,89 @@ function performWorkOnRootViaSchedulerTask(
     trackSchedulerEvent();
   }
 
+  // 检查是否有待处理的 commit 副作用（正在进行异步提交）
+  if (hasPendingCommitEffects()) {
+    // 前正处于异步 commit 中，比如 View Transition（视图过渡动画）。
+    // 可以强制立即执行，但延迟到异步 commit 完成后再做更好。
+
+    // We are currently in the middle of an async committing (such as a View Transition).
+    // We could force these to flush eagerly but it's better to defer any work until
+    // it finishes. This may not be the same root as we're waiting on.
+
+    // 正在等待的 root 可能不是当前这个 root（多个 React 根节点的情况）。
+    // TODO: This relies on the commit eventually calling ensureRootIsScheduled which
+    // always calls processRootScheduleInMicrotask which in turn always loops through
+    // all the roots to figure out. This is all a bit inefficient and if optimized
+    // it'll need to consider rescheduling a task for any skipped roots.
+    // 清空当前 root 的调度信息
+    root.callbackNode = null; // 取消当前调度的任务
+    root.callbackPriority = NoLane; // 重置优先级
+    return null;
+  }
+
+  // 在渲染前先执行待处理的 passive effects（比如 useEffect）
+  // 在决定处理哪些 lanes 之前，先执行待处理的 passive effects，因为它们可能会调度额外的工作
+  // Flush any pending passive effects before deciding which lanes to work on,
+  // in case they schedule additional work.
+
+  // 保存当前的 callbackNode（当前调度任务的引用），用于后面比较
+  const originalCallbackNode = root.callbackNode;
+  // 执行待处理的 passive effects（useEffect 回调）。返回值表示是否真的执行了
+  const didFlushPassiveEffects = flushPendingEffectsDelayed();
+  // 如果确实执行了 passive effects，需要做检查
+  if (didFlushPassiveEffects) {
+    // Something in the passive effect phase may have canceled the current task.
+    // Check if the task node for this root was changed.
+    // 检查 callbackNode 是否变了
+    /*
+      // useEffect 里可能这样：
+      useEffect(() => {
+        setState(newValue);  // 触发新的调度，可能改变 callbackNode
+      }, []);
+    */
+    // 如果 callbackNode 变了，说明要么有新任务被调度了（会用新的 callbackNode），要么没有剩余工作了
+    if (root.callbackNode !== originalCallbackNode) {
+      // The current task was canceled. Exit. We don't need to call
+      // `ensureRootIsScheduled` because the check above implies either that
+      // there's a new task, or that there's no remaining work on this root.
+      // 直接返回 null，当前任务作废。
+      return null;
+    } else {
+      // Current task was not canceled. Continue.
+    }
+  }
+
+  // Determine the next lanes to work on, using the fields stored on the root.
+  // TODO: We already called getNextLanes when we scheduled the callback; we
+  // should be able to avoid calling it again by stashing the result on the
+  // root object. However, because we always schedule the callback during
+  // a microtask (scheduleTaskForRootDuringMicrotask), it's possible that
+  // an update was scheduled earlier during this same browser task (and
+  // therefore before the microtasks have run). That's because Scheduler batches
+  // together multiple callbacks into a single browser macrotask, without
+  // yielding to microtasks in between. We should probably change this to align
+  // with the postTask behavior (and literally use postTask when
+  // it's available).
+  const workInProgressRoot = getWorkInProgressRoot();
+  const workInProgressRootRenderLanes = getWorkInProgressRootRenderLanes();
+  const rootHasPendingCommit =
+    root.cancelPendingCommit !== null || root.timeoutHandle !== noTimeout;
+  const lanes = getNextLanes(
+    root,
+    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
+    rootHasPendingCommit,
+  );
+  if (lanes === NoLanes) {
+    // No more work on this root.
+    return null;
+  }
+
+  // Enter the work loop.
+  // TODO: We only check `didTimeout` defensively, to account for a Scheduler
+  // bug we're still investigating. Once the bug in Scheduler is fixed,
+  // we can remove this, since we track expiration ourselves.
+  const forceSync = !disableSchedulerTimeoutInWorkLoop && didTimeout;
+  performWorkOnRoot(root, lanes, forceSync);
   throw new Error('Not implemented');
 }
 

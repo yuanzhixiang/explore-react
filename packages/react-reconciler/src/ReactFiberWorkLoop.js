@@ -883,3 +883,89 @@ export function hasPendingCommitEffects(): boolean {
     pendingEffectsStatus !== PENDING_PASSIVE_PHASE
   );
 }
+
+let didWarnAboutInterruptedViewTransitions = false;
+
+export function flushPendingEffectsDelayed(): boolean {
+  if (pendingDelayedCommitReason === IMMEDIATE_COMMIT) {
+    pendingDelayedCommitReason = DELAYED_PASSIVE_COMMIT;
+  }
+  return flushPendingEffects();
+}
+
+export function flushPendingEffects(): boolean {
+  // Returns whether passive effects were flushed.
+  if (enableViewTransition && pendingViewTransition !== null) {
+    throw new Error('Not implemented yet.');
+  }
+  flushGestureMutations();
+  flushGestureAnimations();
+  flushMutationEffects();
+  flushLayoutEffects();
+  // Skip flushAfterMutation if we're forcing this early.
+  flushSpawnedWork();
+  return flushPassiveEffects();
+}
+
+function flushGestureMutations(): void {
+  if (!enableGestureTransition) {
+    return;
+  }
+  throw new Error('Not implemented yet.');
+}
+
+function flushGestureAnimations(): void {
+  if (!enableGestureTransition) {
+    return;
+  }
+  throw new Error('Not implemented yet.');
+}
+
+function flushMutationEffects(): void {
+  if (pendingEffectsStatus !== PENDING_MUTATION_PHASE) {
+    return;
+  }
+  throw new Error('Not implemented yet.');
+}
+
+function flushLayoutEffects(): void {
+  if (pendingEffectsStatus !== PENDING_LAYOUT_PHASE) {
+    return;
+  }
+  throw new Error('Not implemented yet.');
+}
+
+function flushSpawnedWork(): void {
+  if (
+    pendingEffectsStatus !== PENDING_SPAWNED_WORK &&
+    // If a startViewTransition times out, we might flush this earlier than
+    // after mutation phase. In that case, we just skip the after mutation phase.
+    pendingEffectsStatus !== PENDING_AFTER_MUTATION_PHASE
+  ) {
+    return;
+  }
+  throw new Error('Not implemented yet.');
+}
+
+function flushPassiveEffects(): boolean {
+  if (pendingEffectsStatus !== PENDING_PASSIVE_PHASE) {
+    return false;
+  }
+  throw new Error('Not implemented yet.');
+}
+
+export function performWorkOnRoot(
+  root: FiberRoot,
+  lanes: Lanes,
+  forceSync: boolean,
+): void {
+  if ((executionContext & (RenderContext | CommitContext)) !== NoContext) {
+    throw new Error('Should not already be working.');
+  }
+
+  if (enableProfilerTimer && enableComponentPerformanceTrack) {
+    throw new Error('Not implemented yet.');
+  }
+
+  throw new Error('Not implemented yet.');
+}
