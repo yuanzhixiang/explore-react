@@ -72,15 +72,15 @@ import {
   supportsMicrotasks,
   scheduleMicrotask,
   // shouldAttemptEagerTransition,
-  // trackSchedulerEvent,
+  trackSchedulerEvent,
   noTimeout,
 } from './ReactFiberConfig';
 
 import ReactSharedInternals from 'shared/ReactSharedInternals';
-// import {
-//   resetNestedUpdateFlag,
-//   syncNestedUpdateFlag,
-// } from './ReactProfilerTimer';
+import {
+  resetNestedUpdateFlag,
+  syncNestedUpdateFlag,
+} from './ReactProfilerTimer';
 // import {peekEntangledActionLane} from './ReactFiberAsyncAction';
 
 import noop from 'shared/noop';
@@ -471,6 +471,21 @@ function performWorkOnRootViaSchedulerTask(
   root: FiberRoot,
   didTimeout: boolean,
 ): RenderTaskFn | null {
+  // This is the entry point for concurrent tasks scheduled via Scheduler (and
+  // postTask, in the future).
+
+  // 重置嵌套更新标记
+  if (enableProfilerTimer && enableProfilerNestedUpdatePhase) {
+    resetNestedUpdateFlag();
+  }
+
+  // 记录当前正在执行的 Scheduler 事件
+  if (enableProfilerTimer && enableComponentPerformanceTrack) {
+    // Track the currently executing event if there is one so we can ignore this
+    // event when logging events.
+    trackSchedulerEvent();
+  }
+
   throw new Error('Not implemented');
 }
 

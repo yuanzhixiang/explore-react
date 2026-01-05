@@ -50,3 +50,42 @@ export function startUpdateTimerByLane(
   }
   throw new Error('Not implemented');
 }
+
+/**
+ * Tracks whether the current update was a nested/cascading update (scheduled from a layout effect).
+ *
+ * The overall sequence is:
+ *   1. render
+ *   2. commit (and call `onRender`, `onCommit`)
+ *   3. check for nested updates
+ *   4. flush passive effects (and call `onPostCommit`)
+ *
+ * Nested updates are identified in step 3 above,
+ * but step 4 still applies to the work that was just committed.
+ * We use two flags to track nested updates then:
+ * one tracks whether the upcoming update is a nested update,
+ * and the other tracks whether the current update was a nested update.
+ * The first value gets synced to the second at the start of the render phase.
+ */
+// 标记当前正在进行的更新是否是嵌套更新。
+let currentUpdateIsNested: boolean = false;
+// 标记是否有嵌套更新被调度了（还没开始执行）。
+let nestedUpdateScheduled: boolean = false;
+
+// 重置两个标记，通常在一轮完整的更新结束后调用
+export function resetNestedUpdateFlag(): void {
+  if (enableProfilerNestedUpdatePhase) {
+    currentUpdateIsNested = false;
+    nestedUpdateScheduled = false;
+  }
+}
+
+// 在 render 阶段开始时调用
+// - 把"预约的嵌套标记"同步到"当前更新标记"
+// - 清空预约标记
+export function syncNestedUpdateFlag(): void {
+  if (enableProfilerNestedUpdatePhase) {
+    currentUpdateIsNested = nestedUpdateScheduled;
+    nestedUpdateScheduled = false;
+  }
+}

@@ -369,3 +369,8 @@ function handleErrorInNextTick(error: any) {
     throw error;
   });
 }
+
+let schedulerEvent: void | Event = undefined;
+export function trackSchedulerEvent(): void {
+  schedulerEvent = window.event;
+}
