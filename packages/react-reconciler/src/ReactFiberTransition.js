@@ -58,3 +58,15 @@ export const NoTransition = null;
 export function requestCurrentTransition(): Transition | null {
   return ReactSharedInternals.T;
 }
+
+export function pushRootTransition(
+  workInProgress: Fiber,
+  root: FiberRoot,
+  renderLanes: Lanes,
+) {
+  if (enableTransitionTracing) {
+    // const rootTransitions = getWorkInProgressTransitions();
+    // push(transitionStack, rootTransitions, workInProgress);
+    throw new Error('Not implemented yet.');
+  }
+}

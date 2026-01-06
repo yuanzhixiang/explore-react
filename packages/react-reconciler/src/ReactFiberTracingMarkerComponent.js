@@ -16,6 +16,10 @@ import type {Transition} from 'react/src/ReactStartTransition';
 import type {OffscreenInstance} from './ReactFiberOffscreenComponent';
 import type {StackCursor} from './ReactFiberStack';
 
+import {enableTransitionTracing} from 'shared/ReactFeatureFlags';
+import {createCursor, push, pop} from './ReactFiberStack';
+import {getWorkInProgressTransitions} from './ReactFiberWorkLoop';
+
 export type SuspenseInfo = {name: string | null};
 
 export type PendingTransitionCallbacks = {
@@ -52,3 +56,9 @@ export const TransitionTracingMarker = 1;
 export type TracingMarkerTag = 0 | 1;
 
 export type PendingBoundaries = Map<OffscreenInstance, SuspenseInfo>;
+
+export function pushRootMarkerInstance(workInProgress: Fiber): void {
+  if (enableTransitionTracing) {
+    throw new Error('Not implemented yet.');
+  }
+}

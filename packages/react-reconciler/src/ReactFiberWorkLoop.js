@@ -1185,3 +1185,10 @@ function pushAsyncDispatcher() {
   ReactSharedInternals.A = DefaultAsyncDispatcher;
   return prevAsyncDispatcher;
 }
+
+export function markSkippedUpdateLanes(lane: Lane | Lanes): void {
+  workInProgressRootSkippedLanes = mergeLanes(
+    lane,
+    workInProgressRootSkippedLanes,
+  );
+}

@@ -102,3 +102,7 @@ function stopIsomorphicDefaultIndicator() {
     cleanup();
   }
 }
+
+export function peekEntangledActionLane(): Lane {
+  return currentEntangledLane;
+}

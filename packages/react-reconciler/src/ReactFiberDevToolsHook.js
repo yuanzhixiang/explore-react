@@ -28,14 +28,14 @@ import {
 //   DefaultEventPriority,
 //   IdleEventPriority,
 // } from './ReactEventPriorities';
-// import {
-//   ImmediatePriority as ImmediateSchedulerPriority,
-//   UserBlockingPriority as UserBlockingSchedulerPriority,
-//   NormalPriority as NormalSchedulerPriority,
-//   IdlePriority as IdleSchedulerPriority,
-//   log,
-//   unstable_setDisableYieldValue,
-// } from './Scheduler';
+import {
+  ImmediatePriority as ImmediateSchedulerPriority,
+  UserBlockingPriority as UserBlockingSchedulerPriority,
+  NormalPriority as NormalSchedulerPriority,
+  IdlePriority as IdleSchedulerPriority,
+  log,
+  // unstable_setDisableYieldValue,
+} from './Scheduler';
 
 declare const __REACT_DEVTOOLS_GLOBAL_HOOK__: Object | void;
 
@@ -83,6 +83,31 @@ export function markRenderStarted(lanes: Lanes): void {
       typeof injectedProfilingHooks.markRenderStarted === 'function'
     ) {
       injectedProfilingHooks.markRenderStarted(lanes);
+    }
+  }
+}
+
+export function setIsStrictModeForDevtools(newIsStrictMode: boolean) {
+  if (typeof log === 'function') {
+    // We're in a test because Scheduler.log only exists
+    // in SchedulerMock. To reduce the noise in strict mode tests,
+    // suppress warnings and disable scheduler yielding during the double render
+
+    // 这个只是用来测试的，没专门设置不会走到这里
+    // unstable_setDisableYieldValue(newIsStrictMode);
+    throw new Error('Not implemented');
+  }
+
+  if (injectedHook && typeof injectedHook.setStrictMode === 'function') {
+    try {
+      injectedHook.setStrictMode(rendererID, newIsStrictMode);
+    } catch (err) {
+      if (__DEV__) {
+        if (!hasLoggedError) {
+          hasLoggedError = true;
+          console.error('React instrumentation encountered an error: %o', err);
+        }
+      }
     }
   }
 }

@@ -217,8 +217,16 @@ export function pickArbitraryLane(lanes: Lanes): Lane {
   throw new Error('Not implemented');
 }
 
+export function isSubsetOfLanes(set: Lanes, subset: Lanes | Lane): boolean {
+  return (set & subset) === subset;
+}
+
 export function mergeLanes(a: Lanes | Lane, b: Lanes | Lane): Lanes {
   return a | b;
+}
+
+export function removeLanes(set: Lanes, subset: Lanes | Lane): Lanes {
+  return set & ~subset;
 }
 
 // 用来从一组 lanes（位掩码）里选一个索引

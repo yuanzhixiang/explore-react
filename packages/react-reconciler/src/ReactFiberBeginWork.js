@@ -136,19 +136,19 @@ import {
 //   resolveClassForHotReloading,
 // } from './ReactFiberHotReloading';
 
-// import {
-//   mountChildFibers,
-//   reconcileChildFibers,
-//   cloneChildFibers,
-//   validateSuspenseListChildren,
-// } from './ReactChildFiber';
-// import {
-//   processUpdateQueue,
-//   cloneUpdateQueue,
-//   initializeUpdateQueue,
-//   enqueueCapturedUpdate,
-//   suspendIfUpdateReadFromEntangledAsyncAction,
-// } from './ReactFiberClassUpdateQueue';
+import {
+  // mountChildFibers,
+  reconcileChildFibers,
+  // cloneChildFibers,
+  // validateSuspenseListChildren,
+} from './ReactChildFiber';
+import {
+  processUpdateQueue,
+  cloneUpdateQueue,
+  initializeUpdateQueue,
+  // enqueueCapturedUpdate,
+  suspendIfUpdateReadFromEntangledAsyncAction,
+} from './ReactFiberClassUpdateQueue';
 import {
   NoLane,
   NoLanes,
@@ -170,19 +170,19 @@ import {
   ProfileMode,
   StrictLegacyMode,
 } from './ReactTypeOfMode';
-// import {
-//   shouldSetTextContent,
-//   isSuspenseInstancePending,
-//   isSuspenseInstanceFallback,
-//   getSuspenseInstanceFallbackErrorDetails,
-//   supportsHydration,
-//   supportsResources,
-//   supportsSingletons,
-//   isPrimaryRenderer,
-//   getResource,
-//   createHoistableInstance,
-//   HostTransitionContext,
-// } from './ReactFiberConfig';
+import {
+  // shouldSetTextContent,
+  // isSuspenseInstancePending,
+  // isSuspenseInstanceFallback,
+  // getSuspenseInstanceFallbackErrorDetails,
+  supportsHydration,
+  // supportsResources,
+  // supportsSingletons,
+  // isPrimaryRenderer,
+  // getResource,
+  // createHoistableInstance,
+  // HostTransitionContext,
+} from './ReactFiberConfig';
 import type {ActivityInstance, SuspenseInstance} from './ReactFiberConfig';
 // import {shouldError, shouldSuspend} from './ReactFiberReconciler';
 import {
@@ -236,20 +236,20 @@ import {
   pushTopLevelContextObject,
   // invalidateContextProvider,
 } from './ReactFiberLegacyContext';
-// import {
-//   getIsHydrating,
-//   enterHydrationState,
-//   reenterHydrationStateFromDehydratedActivityInstance,
-//   reenterHydrationStateFromDehydratedSuspenseInstance,
-//   resetHydrationState,
-//   claimHydratableSingleton,
-//   tryToClaimNextHydratableInstance,
-//   tryToClaimNextHydratableTextInstance,
-//   claimNextHydratableActivityInstance,
-//   claimNextHydratableSuspenseInstance,
-//   warnIfHydrating,
-//   queueHydrationError,
-// } from './ReactFiberHydrationContext';
+import {
+  // getIsHydrating,
+  // enterHydrationState,
+  // reenterHydrationStateFromDehydratedActivityInstance,
+  // reenterHydrationStateFromDehydratedSuspenseInstance,
+  resetHydrationState,
+  // claimHydratableSingleton,
+  // tryToClaimNextHydratableInstance,
+  // tryToClaimNextHydratableTextInstance,
+  // claimNextHydratableActivityInstance,
+  // claimNextHydratableSuspenseInstance,
+  // warnIfHydrating,
+  // queueHydrationError,
+} from './ReactFiberHydrationContext';
 // import {
 //   constructClassInstance,
 //   mountClassInstance,
@@ -274,7 +274,7 @@ import {
 //   peekDeferredLane,
 // } from './ReactFiberWorkLoop';
 // import {enqueueConcurrentRenderForLane} from './ReactFiberConcurrentUpdates';
-// import {pushCacheProvider, CacheContext} from './ReactFiberCacheComponent';
+import {pushCacheProvider, CacheContext} from './ReactFiberCacheComponent';
 // import {
 //   createCapturedValueFromError,
 //   createCapturedValueAtFiber,
@@ -290,20 +290,20 @@ import {OffscreenVisible} from './ReactFiberOffscreenComponent';
 //   pushTreeId,
 //   pushMaterializedTreeId,
 // } from './ReactFiberTreeContext';
-// import {
-//   requestCacheFromPool,
-//   pushRootTransition,
-//   getSuspendedCache,
-//   pushTransition,
-//   getOffscreenDeferredCache,
-//   getPendingTransitions,
-// } from './ReactFiberTransition';
-// import {
-//   getMarkerInstances,
-//   pushMarkerInstance,
-//   pushRootMarkerInstance,
-//   TransitionTracingMarker,
-// } from './ReactFiberTracingMarkerComponent';
+import {
+  // requestCacheFromPool,
+  pushRootTransition,
+  // getSuspendedCache,
+  // pushTransition,
+  // getOffscreenDeferredCache,
+  // getPendingTransitions,
+} from './ReactFiberTransition';
+import {
+  // getMarkerInstances,
+  // pushMarkerInstance,
+  pushRootMarkerInstance,
+  TransitionTracingMarker,
+} from './ReactFiberTracingMarkerComponent';
 // import {callComponentInDEV, callRenderInDEV} from './ReactFiberCallUserSpace';
 // import {resolveLazy} from './ReactFiberThenable';
 
@@ -351,7 +351,77 @@ function updateHostRoot(
   const nextProps = workInProgress.pendingProps;
   const prevState: RootState = workInProgress.memoizedState;
   const prevChildren = prevState.element;
+  cloneUpdateQueue(current, workInProgress);
+  processUpdateQueue(workInProgress, nextProps, null, renderLanes);
+
+  const nextState: RootState = workInProgress.memoizedState;
+  const root: FiberRoot = workInProgress.stateNode;
+  pushRootTransition(workInProgress, root, renderLanes);
+
+  if (enableTransitionTracing) {
+    pushRootMarkerInstance(workInProgress);
+  }
+
+  const nextCache: Cache = nextState.cache;
+  pushCacheProvider(workInProgress, nextCache);
+  if (nextCache !== prevState.cache) {
+    // The root cache refreshed.
+    // propagateContextChange(workInProgress, CacheContext, renderLanes);
+    throw new Error('Not implemented yet.');
+  }
+
+  // This would ideally go inside processUpdateQueue, but because it suspends,
+  // it needs to happen after the `pushCacheProvider` call above to avoid a
+  // context stack mismatch. A bit unfortunate.
+  suspendIfUpdateReadFromEntangledAsyncAction();
+
+  // Caution: React DevTools currently depends on this property
+  // being called "element".
+  const nextChildren = nextState.element;
+  if (supportsHydration && prevState.isDehydrated) {
+    throw new Error('Not implemented yet.');
+  } else {
+    // Root is not dehydrated. Either this is a client-only root, or it
+    // already hydrated.
+    resetHydrationState();
+    if (nextChildren === prevChildren) {
+      return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
+    }
+    reconcileChildren(current, workInProgress, nextChildren, renderLanes);
+  }
+  return workInProgress.child;
+}
+
+function bailoutOnAlreadyFinishedWork(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  renderLanes: Lanes,
+): Fiber | null {
   throw new Error('Not implemented yet.');
+}
+
+export function reconcileChildren(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  nextChildren: any,
+  renderLanes: Lanes,
+) {
+  if (current === null) {
+    throw new Error('Not implemented yet.');
+  } else {
+    // If the current child is the same as the work in progress, it means that
+    // we haven't yet started any work on these children. Therefore, we use
+    // the clone algorithm to create a copy of all the current children.
+
+    // If we had any progressed work already, that is invalid at this point so
+    // let's throw it out.
+    workInProgress.child = reconcileChildFibers(
+      workInProgress,
+      current.child,
+      nextChildren,
+      renderLanes,
+    );
+  }
 }
 
 function pushHostRootContext(workInProgress: Fiber) {

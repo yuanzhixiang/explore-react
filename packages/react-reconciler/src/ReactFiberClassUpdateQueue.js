@@ -91,17 +91,17 @@ import {
   NoLane,
   NoLanes,
   OffscreenLane,
-  // isSubsetOfLanes,
+  isSubsetOfLanes,
   mergeLanes,
-  // removeLanes,
+  removeLanes,
   isTransitionLane,
   intersectLanes,
   markRootEntangled,
 } from './ReactFiberLane';
-// import {
-//   enterDisallowedContextReadInDEV,
-//   exitDisallowedContextReadInDEV,
-// } from './ReactFiberNewContext';
+import {
+  enterDisallowedContextReadInDEV,
+  exitDisallowedContextReadInDEV,
+} from './ReactFiberNewContext';
 // import {
 //   Callback,
 //   Visibility,
@@ -110,23 +110,23 @@ import {
 // } from './ReactFiberFlags';
 import getComponentNameFromFiber from './getComponentNameFromFiber';
 
-// import {StrictLegacyMode} from './ReactTypeOfMode';
+import {StrictLegacyMode} from './ReactTypeOfMode';
 import {
-  // markSkippedUpdateLanes,
+  markSkippedUpdateLanes,
   isUnsafeClassRenderPhaseUpdate,
-  // getWorkInProgressRootRenderLanes,
+  getWorkInProgressRootRenderLanes,
 } from './ReactFiberWorkLoop';
 import {
   enqueueConcurrentClassUpdate,
   // unsafe_markUpdateLaneFromFiberToRoot,
 } from './ReactFiberConcurrentUpdates';
-// import {setIsStrictModeForDevtools} from './ReactFiberDevToolsHook';
+import {setIsStrictModeForDevtools} from './ReactFiberDevToolsHook';
 
-// import assign from 'shared/assign';
-// import {
-//   peekEntangledActionLane,
-//   peekEntangledActionThenable,
-// } from './ReactFiberAsyncAction';
+import assign from 'shared/assign';
+import {
+  peekEntangledActionLane,
+  // peekEntangledActionThenable,
+} from './ReactFiberAsyncAction';
 
 export type Update<State> = {
   lane: Lane,
@@ -165,6 +165,24 @@ let hasForceUpdate = false;
 let didWarnUpdateInsideUpdate;
 let currentlyProcessingQueue: ?SharedQueue<$FlowFixMe>;
 
+let didReadFromEntangledAsyncAction: boolean = false;
+
+// Each call to processUpdateQueue should be accompanied by a call to this. It's
+// only in a separate function because in updateHostRoot, it must happen after
+// all the context stacks have been pushed to, to prevent a stack mismatch. A
+// bit unfortunate.
+export function suspendIfUpdateReadFromEntangledAsyncAction() {
+  // Check if this update is part of a pending async action. If so, we'll
+  // need to suspend until the action has finished, so that it's batched
+  // together with future updates in the same action.
+  // TODO: Once we support hooks inside useMemo (or an equivalent
+  // memoization boundary like Forget), hoist this logic so that it only
+  // suspends if the memo boundary produces a new value.
+  if (didReadFromEntangledAsyncAction) {
+    throw new Error('Not implemented yet.');
+  }
+}
+
 export function initializeUpdateQueue<State>(fiber: Fiber): void {
   const queue: UpdateQueue<State> = {
     // memoizedState 是该 Fiber 上一次完成渲染后的状态快照
@@ -193,6 +211,305 @@ export function createUpdate(lane: Lane): Update<mixed> {
     next: null,
   };
   return update;
+}
+
+export function cloneUpdateQueue<State>(
+  current: Fiber,
+  workInProgress: Fiber,
+): void {
+  // Clone the update queue from current. Unless it's already a clone.
+  const queue: UpdateQueue<State> = (workInProgress.updateQueue: any);
+  const currentQueue: UpdateQueue<State> = (current.updateQueue: any);
+  if (queue === currentQueue) {
+    const clone: UpdateQueue<State> = {
+      baseState: currentQueue.baseState,
+      firstBaseUpdate: currentQueue.firstBaseUpdate,
+      lastBaseUpdate: currentQueue.lastBaseUpdate,
+      shared: currentQueue.shared,
+      callbacks: null,
+    };
+    workInProgress.updateQueue = clone;
+  }
+}
+
+export function processUpdateQueue<State>(
+  workInProgress: Fiber,
+  props: any,
+  instance: any,
+  renderLanes: Lanes,
+): void {
+  // 重置异步 action 相关的标记（用于 useActionState 等特性）
+  didReadFromEntangledAsyncAction = false;
+
+  // This is always non-null on a ClassComponent or HostRoot
+  // 获取 Fiber 上的更新队列
+  const queue: UpdateQueue<State> = (workInProgress.updateQueue: any);
+
+  // 重置强制更新标记（forceUpdate() 会设置这个）
+  hasForceUpdate = false;
+
+  // 开发模式下记录当前处理的队列，用于调试
+  if (__DEV__) {
+    currentlyProcessingQueue = queue.shared;
+  }
+
+  // 获取 base 队列的头尾指针。base 队列存放上次未处理完的 update（被跳过的低优先级更新）
+  let firstBaseUpdate = queue.firstBaseUpdate;
+  let lastBaseUpdate = queue.lastBaseUpdate;
+
+  // Check if there are pending updates. If so, transfer them to the base queue.
+  // 获取 pending 队列（新的 setState 产生的 update）
+  let pendingQueue = queue.shared.pending;
+  if (pendingQueue !== null) {
+    // 清空 pending，因为马上要处理了
+    queue.shared.pending = null;
+
+    // The pending queue is circular. Disconnect the pointer between first
+    // and last so that it's non-circular.
+    // pending 是循环链表，pendingQueue 指向最后一个节点
+    const lastPendingUpdate = pendingQueue;
+    // 第一个节点是 lastPendingUpdate.next
+    const firstPendingUpdate = lastPendingUpdate.next;
+    lastPendingUpdate.next = null;
+    // Append pending updates to base queue
+    if (lastBaseUpdate === null) {
+      firstBaseUpdate = firstPendingUpdate;
+    } else {
+      lastBaseUpdate.next = firstPendingUpdate;
+    }
+    lastBaseUpdate = lastPendingUpdate;
+
+    // If there's a current queue, and it's different from the base queue, then
+    // we need to transfer the updates to that queue, too. Because the base
+    // queue is a singly-linked list with no cycles, we can append to both
+    // lists and take advantage of structural sharing.
+    // TODO: Pass `current` as argument
+    // 获取 current Fiber（屏幕上显示的那棵树）
+    const current = workInProgress.alternate;
+    if (current !== null) {
+      // This is always non-null on a ClassComponent or HostRoot
+      // 检查 current 的队列是否需要同步
+      const currentQueue: UpdateQueue<State> = (current.updateQueue: any);
+      const currentLastBaseUpdate = currentQueue.lastBaseUpdate;
+      // 把同样的 pending 更新也追加到 current 的队列
+      if (currentLastBaseUpdate !== lastBaseUpdate) {
+        if (currentLastBaseUpdate === null) {
+          currentQueue.firstBaseUpdate = firstPendingUpdate;
+        } else {
+          currentLastBaseUpdate.next = firstPendingUpdate;
+        }
+        currentQueue.lastBaseUpdate = lastPendingUpdate;
+      }
+    }
+  }
+
+  // These values may change as we process the queue.
+  if (firstBaseUpdate !== null) {
+    // Iterate through the list of updates to compute the result.
+    let newState = queue.baseState;
+    // TODO: Don't need to accumulate this. Instead, we can remove renderLanes
+    // from the original lanes.
+    let newLanes: Lanes = NoLanes;
+
+    let newBaseState = null;
+    let newFirstBaseUpdate = null;
+    let newLastBaseUpdate: null | Update<State> = null;
+
+    let update: Update<State> = firstBaseUpdate;
+
+    do {
+      // An extra OffscreenLane bit is added to updates that were made to
+      // a hidden tree, so that we can distinguish them from updates that were
+      // already there when the tree was hidden.
+      const updateLane = removeLanes(update.lane, OffscreenLane);
+      const isHiddenUpdate = updateLane !== update.lane;
+
+      // Check if this update was made while the tree was hidden. If so, then
+      // it's not a "base" update and we should disregard the extra base lanes
+      // that were added to renderLanes when we entered the Offscreen tree.
+      const shouldSkipUpdate = isHiddenUpdate
+        ? !isSubsetOfLanes(getWorkInProgressRootRenderLanes(), updateLane)
+        : !isSubsetOfLanes(renderLanes, updateLane);
+
+      if (shouldSkipUpdate) {
+        // Priority is insufficient. Skip this update. If this is the first
+        // skipped update, the previous update/state is the new base
+        // update/state.
+        const clone: Update<State> = {
+          lane: updateLane,
+
+          tag: update.tag,
+          payload: update.payload,
+          callback: update.callback,
+
+          next: null,
+        };
+        if (newLastBaseUpdate === null) {
+          newFirstBaseUpdate = newLastBaseUpdate = clone;
+          newBaseState = newState;
+        } else {
+          newLastBaseUpdate = newLastBaseUpdate.next = clone;
+        }
+        // Update the remaining priority in the queue.
+        newLanes = mergeLanes(newLanes, updateLane);
+      } else {
+        // This update does have sufficient priority.
+
+        // Check if this update is part of a pending async action. If so,
+        // we'll need to suspend until the action has finished, so that it's
+        // batched together with future updates in the same action.
+        if (updateLane !== NoLane && updateLane === peekEntangledActionLane()) {
+          didReadFromEntangledAsyncAction = true;
+        }
+
+        if (newLastBaseUpdate !== null) {
+          const clone: Update<State> = {
+            // This update is going to be committed so we never want uncommit
+            // it. Using NoLane works because 0 is a subset of all bitmasks, so
+            // this will never be skipped by the check above.
+            lane: NoLane,
+
+            tag: update.tag,
+            payload: update.payload,
+
+            // When this update is rebased, we should not fire its
+            // callback again.
+            callback: null,
+
+            next: null,
+          };
+          newLastBaseUpdate = newLastBaseUpdate.next = clone;
+        }
+
+        // Process this update.
+        newState = getStateFromUpdate(
+          workInProgress,
+          queue,
+          update,
+          newState,
+          props,
+          instance,
+        );
+        const callback = update.callback;
+        if (callback !== null) {
+          //   workInProgress.flags |= Callback;
+          //   if (isHiddenUpdate) {
+          //     workInProgress.flags |= Visibility;
+          //   }
+          //   const callbacks = queue.callbacks;
+          //   if (callbacks === null) {
+          //     queue.callbacks = [callback];
+          //   } else {
+          //     callbacks.push(callback);
+          //   }
+          throw new Error('Not implemented yet.');
+        }
+      }
+      // $FlowFixMe[incompatible-type] we bail out when we get a null
+      update = update.next;
+      if (update === null) {
+        pendingQueue = queue.shared.pending;
+        if (pendingQueue === null) {
+          break;
+        } else {
+          // An update was scheduled from inside a reducer. Add the new
+          // pending updates to the end of the list and keep processing.
+          const lastPendingUpdate = pendingQueue;
+          // Intentionally unsound. Pending updates form a circular list, but we
+          // unravel them when transferring them to the base queue.
+          const firstPendingUpdate =
+            ((lastPendingUpdate.next: any): Update<State>);
+          lastPendingUpdate.next = null;
+          update = firstPendingUpdate;
+          queue.lastBaseUpdate = lastPendingUpdate;
+          queue.shared.pending = null;
+        }
+      }
+    } while (true);
+
+    if (newLastBaseUpdate === null) {
+      newBaseState = newState;
+    }
+
+    queue.baseState = ((newBaseState: any): State);
+    queue.firstBaseUpdate = newFirstBaseUpdate;
+    queue.lastBaseUpdate = newLastBaseUpdate;
+
+    if (firstBaseUpdate === null) {
+      // `queue.lanes` is used for entangling transitions. We can set it back to
+      // zero once the queue is empty.
+      queue.shared.lanes = NoLanes;
+    }
+
+    // Set the remaining expiration time to be whatever is remaining in the queue.
+    // This should be fine because the only two other things that contribute to
+    // expiration time are props and context. We're already in the middle of the
+    // begin phase by the time we start processing the queue, so we've already
+    // dealt with the props. Context in components that specify
+    // shouldComponentUpdate is tricky; but we'll have to account for
+    // that regardless.
+    markSkippedUpdateLanes(newLanes);
+    workInProgress.lanes = newLanes;
+    workInProgress.memoizedState = newState;
+  }
+
+  if (__DEV__) {
+    currentlyProcessingQueue = null;
+  }
+}
+
+function getStateFromUpdate<State>(
+  workInProgress: Fiber,
+  queue: UpdateQueue<State>,
+  update: Update<State>,
+  prevState: State,
+  nextProps: any,
+  instance: any,
+): any {
+  switch (update.tag) {
+    case ReplaceState: {
+      throw new Error('Not implemented yet.');
+    }
+    case CaptureUpdate: {
+      throw new Error('Not implemented yet.');
+    }
+    // Intentional fallthrough
+    case UpdateState: {
+      const payload = update.payload;
+      let partialState;
+      if (typeof payload === 'function') {
+        // Updater function
+        if (__DEV__) {
+          enterDisallowedContextReadInDEV();
+        }
+        partialState = payload.call(instance, prevState, nextProps);
+        if (__DEV__) {
+          if (workInProgress.mode & StrictLegacyMode) {
+            setIsStrictModeForDevtools(true);
+            try {
+              payload.call(instance, prevState, nextProps);
+            } finally {
+              setIsStrictModeForDevtools(false);
+            }
+          }
+          exitDisallowedContextReadInDEV();
+        }
+      } else {
+        // Partial state object
+        partialState = payload;
+      }
+      if (partialState === null || partialState === undefined) {
+        // Null and undefined are treated as no-ops.
+        return prevState;
+      }
+      // Merge the partial state and the previous state.
+      return assign({}, prevState, partialState);
+    }
+    case ForceUpdate: {
+      throw new Error('Not implemented yet.');
+    }
+  }
+  return prevState;
 }
 
 export function enqueueUpdate<State>(

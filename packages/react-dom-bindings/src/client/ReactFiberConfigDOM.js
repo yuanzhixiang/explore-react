@@ -335,6 +335,8 @@ interface CustomTimeline {
 
 export type GestureTimeline = AnimationTimeline | CustomTimeline;
 
+export const isPrimaryRenderer = true;
+export const warnsIfNotActing = true;
 // This initialization code may run even on server environments
 // if a component just imports ReactDOM (e.g. for findDOMNode).
 // Some environments might not have setTimeout or clearTimeout.
@@ -443,3 +445,9 @@ function getChildHostContextProd(
   // By default, pass namespace below.
   return parentNamespace;
 }
+
+// -------------------
+//     Hydration
+// -------------------
+
+export const supportsHydration = true;
