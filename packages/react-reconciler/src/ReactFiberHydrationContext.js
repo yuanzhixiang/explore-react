@@ -104,10 +104,14 @@ function resetHydrationState(): void {
   didSuspendOrErrorDEV = false;
 }
 
+function getIsHydrating(): boolean {
+  return isHydrating;
+}
+
 export {
   // warnIfHydrating,
   // enterHydrationState,
-  // getIsHydrating,
+  getIsHydrating,
   // reenterHydrationStateFromDehydratedActivityInstance,
   // reenterHydrationStateFromDehydratedSuspenseInstance,
   resetHydrationState,

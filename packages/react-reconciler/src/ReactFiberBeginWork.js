@@ -237,7 +237,7 @@ import {
   // invalidateContextProvider,
 } from './ReactFiberLegacyContext';
 import {
-  // getIsHydrating,
+  getIsHydrating,
   // enterHydrationState,
   // reenterHydrationStateFromDehydratedActivityInstance,
   // reenterHydrationStateFromDehydratedSuspenseInstance,
@@ -284,12 +284,12 @@ import {OffscreenVisible} from './ReactFiberOffscreenComponent';
 //   createClassErrorUpdate,
 //   initializeClassErrorUpdate,
 // } from './ReactFiberThrow';
-// import {
-//   getForksAtLevel,
-//   isForkedChild,
-//   pushTreeId,
-//   pushMaterializedTreeId,
-// } from './ReactFiberTreeContext';
+import {
+  getForksAtLevel,
+  isForkedChild,
+  pushTreeId,
+  pushMaterializedTreeId,
+} from './ReactFiberTreeContext';
 import {
   // requestCacheFromPool,
   pushRootTransition,
@@ -508,7 +508,22 @@ function beginWork(
       }
     }
   } else {
-    throw new Error('Not implemented yet.');
+    didReceiveUpdate = false;
+
+    if (getIsHydrating() && isForkedChild(workInProgress)) {
+      // Check if this child belongs to a list of muliple children in
+      // its parent.
+      //
+      // In a true multi-threaded implementation, we would render children on
+      // parallel threads. This would represent the beginning of a new render
+      // thread for this subtree.
+      //
+      // We only use this for id generation during hydration, which is why the
+      // logic is located in this special branch.
+      const slotIndex = workInProgress.index;
+      const numberOfForks = getForksAtLevel(workInProgress);
+      pushTreeId(workInProgress, numberOfForks, slotIndex);
+    }
   }
 
   // Before entering the begin phase, clear pending update priority.
@@ -537,7 +552,7 @@ function beginWork(
       throw new Error('Not implemented yet.');
     // Fall through
     case HostComponent:
-      throw new Error('Not implemented yet.');
+      return updateHostComponent(current, workInProgress, renderLanes);
     case HostText:
       throw new Error('Not implemented yet.');
     case SuspenseComponent:
@@ -604,6 +619,14 @@ function beginWork(
     `Unknown unit of work tag (${workInProgress.tag}). This error is likely caused by a bug in ` +
       'React. Please file an issue.',
   );
+}
+
+function updateHostComponent(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  renderLanes: Lanes,
+) {
+  throw new Error('Not implemented yet.');
 }
 
 function remountFiber(
