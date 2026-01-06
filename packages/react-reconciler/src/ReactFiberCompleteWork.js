@@ -110,7 +110,7 @@ import {
   // finalizeInitialChildren,
   // finalizeHydratedChildren,
   // supportsMutation,
-  // supportsPersistence,
+  supportsPersistence,
   supportsResources,
   supportsSingletons,
   // cloneInstance,
@@ -192,6 +192,25 @@ import {popTreeContext, pushTreeFork} from './ReactFiberTreeContext';
 // import {suspendCommit} from './ReactFiberThenable';
 import type {Flags} from './ReactFiberFlags';
 
+/**
+ * Tag the fiber with Cloned in persistent mode to signal that
+ * it received an update that requires a clone of the tree above.
+ */
+function markCloned(workInProgress: Fiber) {
+  if (supportsPersistence) {
+    workInProgress.flags |= Cloned;
+  }
+}
+
+function appendAllChildren(
+  parent: Instance,
+  workInProgress: Fiber,
+  needsVisibilityToggle: boolean,
+  isHidden: boolean,
+) {
+  throw new Error('Not implemented yet.');
+}
+
 function completeWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -249,6 +268,7 @@ function completeWork(
           throw new Error('Not implemented yet.');
         } else {
           const rootContainerInstance = getRootHostContainer();
+          // 这里就是真正创建 DOM 元素的地方，并且他会将 fiber 和 props 挂到元素上
           const instance = createInstance(
             type,
             newProps,
@@ -257,6 +277,11 @@ function completeWork(
             workInProgress,
           );
 
+          // TODO: For persistent renderers, we should pass children as part
+          // of the initial instance creation
+          markCloned(workInProgress);
+          appendAllChildren(instance, workInProgress, false, false);
+          workInProgress.stateNode = instance;
           throw new Error('Not implemented yet.');
         }
         throw new Error('Not implemented yet.');

@@ -34,7 +34,7 @@ import {NotPending} from '../shared/ReactDOMFormActions';
 // import {getCurrentRootHostContainer} from 'react-reconciler/src/ReactFiberHostContext';
 // import {runWithFiberInDEV} from 'react-reconciler/src/ReactCurrentFiber';
 
-// import hasOwnProperty from 'shared/hasOwnProperty';
+import hasOwnProperty from 'shared/hasOwnProperty';
 // import {checkAttributeStringCoercion} from 'shared/CheckStringCoercion';
 import {REACT_CONTEXT_TYPE} from 'shared/ReactSymbols';
 
@@ -44,8 +44,8 @@ export {
   resolveUpdatePriority,
 } from './ReactDOMUpdatePriority';
 import {
-  // precacheFiberNode,
-  // updateFiberProps,
+  precacheFiberNode,
+  updateFiberProps,
   // getFiberCurrentPropsFromNode,
   // getInstanceFromNode,
   // getClosestInstanceFromNode,
@@ -143,6 +143,8 @@ import {listenToAllSupportedEvents} from '../events/DOMPluginEventSystem';
 // import ReactDOMSharedInternals from 'shared/ReactDOMSharedInternals';
 
 export {default as rendererVersion} from 'shared/ReactVersion';
+
+export * from './ReactFiberConfigWithNoPersistence';
 
 import noop from 'shared/noop';
 // import estimateBandwidth from './estimateBandwidth';
@@ -293,6 +295,20 @@ type StoredEventListener = {
   type: string,
   listener: EventListener,
   optionsOrUseCapture: void | EventListenerOptionsOrUseCapture,
+};
+
+let didWarnScriptTags = false;
+const warnedUnknownTags: {
+  [key: string]: boolean,
+} = {
+  // There are working polyfills for <dialog>. Let people use it.
+  dialog: true,
+  // Electron ships a custom <webview> tag to display external web content in
+  // an isolated frame and process.
+  // This tag is not present in non Electron environments such as JSDom which
+  // is often used for testing purposes.
+  // @see https://electronjs.org/docs/api/webview-tag
+  webview: true,
 };
 
 export type FragmentInstanceType = {
@@ -662,19 +678,27 @@ function getOwnerDocumentFromRootContainer(
   rootContainerElement: Element | Document | DocumentFragment,
 ): Document {
   return rootContainerElement.nodeType === DOCUMENT_NODE
-    ? (rootContainerElement: any)
-    : rootContainerElement.ownerDocument;
+    ? // 如果元素是 document 本身，那么直接返回他自己
+      (rootContainerElement: any)
+    : // 如果不是，就返回他的 ownerDocument
+      rootContainerElement.ownerDocument;
 }
 
 export function createInstance(
+  // 标签名，如 'div', 'span', 'svg'
   type: string,
+  // 属性，如 { className: 'foo', onClick: fn }
   props: Props,
+  // 根容器，如 document.getElementById('root')
   rootContainerInstance: Container,
+  // 宿主上下文（命名空间信息）
   hostContext: HostContext,
+  // Fiber 节点
   internalInstanceHandle: Object,
 ): Instance {
   let hostContextProd: HostContextProd;
   if (__DEV__) {
+    // 开发模式下校验 DOM 嵌套是否合法（如 <p> 里不能放 <div>）
     // TODO: take namespace into account when validating.
     const hostContextDev: HostContextDev = (hostContext: any);
     validateDOMNesting(type, hostContextDev.ancestorInfo);
@@ -683,10 +707,102 @@ export function createInstance(
     hostContextProd = (hostContext: any);
   }
 
+  // 获取 document 对象，用于后面创建元素
+  // @why 他的 document 对象是从哪儿获取的？
   const ownerDocument = getOwnerDocumentFromRootContainer(
     rootContainerInstance,
   );
 
+  // 根据命名空间创建元素
   let domElement: Instance;
-  throw new Error('Not implemented yet.');
+  switch (hostContextProd) {
+    // 如果当前在 SVG 命名空间内，用 createElementNS 创建
+    /*
+<!-- SVG 命名空间内的元素必须用 createElementNS -->
+<svg>
+  <rect />   <!-- 需要 createElementNS('http://www.w3.org/2000/svg', 'rect') -->
+</svg>
+    */
+    case HostContextNamespaceSvg:
+      domElement = ownerDocument.createElementNS(SVG_NAMESPACE, type);
+      break;
+    // 如果当前在 MathML 命名空间内，用 createElementNS 创建
+    case HostContextNamespaceMath:
+      domElement = ownerDocument.createElementNS(MATH_NAMESPACE, type);
+      break;
+    // 处理普通 HTML 元素
+    default:
+      switch (type) {
+        // 遇到 <svg> 标签，切换到对应命名空间
+        case 'svg': {
+          domElement = ownerDocument.createElementNS(SVG_NAMESPACE, type);
+          break;
+        }
+        // 遇到 <math> 标签，切换到对应命名空间
+        case 'math': {
+          domElement = ownerDocument.createElementNS(MATH_NAMESPACE, type);
+          break;
+        }
+        case 'script': {
+          throw new Error('Not implemented yet.');
+        }
+        case 'select': {
+          throw new Error('Not implemented yet.');
+        }
+        // 处理普通元素
+        default: {
+          // 普通元素直接用 createElement
+          if (typeof props.is === 'string') {
+            // props.is 是 Web Components 的自定义内置元素语法
+            // <button is="fancy-button">Click</button>
+            domElement = ownerDocument.createElement(type, {is: props.is});
+          } else {
+            // Separate else branch instead of using `props.is || undefined` above because of a Firefox bug.
+            // See discussion in https://github.com/facebook/react/pull/6896
+            // and discussion in https://bugzilla.mozilla.org/show_bug.cgi?id=1276240
+            domElement = ownerDocument.createElement(type);
+          }
+
+          // 开发模式警告
+          if (__DEV__) {
+            if (type.indexOf('-') === -1) {
+              // We're not SVG/MathML and we don't have a dash, so we're not a custom element
+              // Even if you use `is`, these should be of known type and lower case.
+              // <DIV />  // ❌ 警告：应该用 <div />
+              if (type !== type.toLowerCase()) {
+                console.error(
+                  '<%s /> is using incorrect casing. ' +
+                    'Use PascalCase for React components, ' +
+                    'or lowercase for HTML elements.',
+                  type,
+                );
+              }
+
+              // <foobar />  // ❌ 警告：浏览器不认识这个标签
+              if (
+                // $FlowFixMe[method-unbinding]
+                Object.prototype.toString.call(domElement) ===
+                  '[object HTMLUnknownElement]' &&
+                !hasOwnProperty.call(warnedUnknownTags, type)
+              ) {
+                warnedUnknownTags[type] = true;
+                console.error(
+                  'The tag <%s> is unrecognized in this browser. ' +
+                    'If you meant to render a React component, start its name with ' +
+                    'an uppercase letter.',
+                  type,
+                );
+              }
+            }
+          }
+        }
+      }
+  }
+  // 把 Fiber 存到 DOM 元素上（domElement.__reactFiber = fiber），方便后续通过 DOM 找到 Fiber
+  // @why 这里需要再深度理解一下
+  precacheFiberNode(internalInstanceHandle, domElement);
+  // 把 props 存到 DOM 元素上（domElement.__reactProps = props），事件系统会用到
+  // @why 这里需要再深度理解一下
+  updateFiberProps(domElement, props);
+  return domElement;
 }
