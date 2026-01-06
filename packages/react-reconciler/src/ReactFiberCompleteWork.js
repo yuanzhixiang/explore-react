@@ -107,7 +107,7 @@ import {
   // createTextInstance,
   // resolveSingletonInstance,
   // appendInitialChild,
-  // finalizeInitialChildren,
+  finalizeInitialChildren,
   // finalizeHydratedChildren,
   // supportsMutation,
   supportsPersistence,
@@ -202,6 +202,14 @@ function markCloned(workInProgress: Fiber) {
   }
 }
 
+/**
+ * Tag the fiber with an update effect. This turns a Placement into
+ * a PlacementAndUpdate.
+ */
+function markUpdate(workInProgress: Fiber) {
+  workInProgress.flags |= Update;
+}
+
 function appendAllChildren(
   parent: Instance,
   workInProgress: Fiber,
@@ -249,24 +257,36 @@ function completeWork(
       throw new Error('Not implemented yet.');
     }
     case HostComponent: {
+      // 弹出宿主上下文。
+      // 在 beginWork 时会 pushHostContext（压入命名空间信息，比如是否在 SVG/MathML 内），
+      // 现在完成工作了，需要弹出恢复之前的上下文。
       popHostContext(workInProgress);
+      // 获取元素类型，比如 'div'、'span'、'svg' 等标签名
       const type = workInProgress.type;
       if (current !== null && workInProgress.stateNode != null) {
+        // 如果 current 存在（说明是更新而非首次挂载）且已有 DOM 节点（stateNode），
+        // 应该走更新逻辑（updateHostComponent）
         throw new Error('Not implemented yet.');
       } else {
+        // 首次创建 DOM 元素
         if (!newProps) {
           throw new Error('Not implemented yet.');
         }
 
+        // 获取当前的宿主上下文（命名空间信息）
+        // 用于决定是用 createElement 还是 createElementNS
         const currentHostContext = getHostContext();
         // TODO: Move createInstance to beginWork and keep it on a context
         // "stack" as the parent. Then append children as we go in beginWork
         // or completeWork depending on whether we want to add them top->down or
         // bottom->up. Top->down is faster in IE11.
+
+        // 检查是否是 hydration（服务端渲染复用 DOM）
         const wasHydrated = popHydrationState(workInProgress);
         if (wasHydrated) {
           throw new Error('Not implemented yet.');
         } else {
+          // 获取根容器
           const rootContainerInstance = getRootHostContainer();
           // 这里就是真正创建 DOM 元素的地方，并且他会将 fiber 和 props 挂到元素上
           const instance = createInstance(
@@ -279,10 +299,28 @@ function completeWork(
 
           // TODO: For persistent renderers, we should pass children as part
           // of the initial instance creation
+
+          // 标记这个 Fiber 已经被克隆过了
+          // 用于持久化模式（你用的 DOM 是可变模式，这个其实是空操作）
           markCloned(workInProgress);
+          // 把所有子节点的 DOM 追加到刚创建的 instance 上
           appendAllChildren(instance, workInProgress, false, false);
+          // 把创建的 DOM 元素存到 Fiber 的 stateNode 上
           workInProgress.stateNode = instance;
-          throw new Error('Not implemented yet.');
+
+          // Certain renderers require commit-time effects for initial mount.
+          // (eg DOM renderer supports auto-focus for certain elements).
+          // Make sure such renderers get scheduled for later work.
+          if (
+            finalizeInitialChildren(
+              instance,
+              type,
+              newProps,
+              currentHostContext,
+            )
+          ) {
+            markUpdate(workInProgress);
+          }
         }
         throw new Error('Not implemented yet.');
       }

@@ -74,16 +74,16 @@ import {
 
 // export {detachDeletedInstance};
 // import {hasRole} from './DOMAccessibilityRoles';
-// import {
-//   setInitialProperties,
-//   updateProperties,
-//   hydrateProperties,
-//   hydrateText,
-//   diffHydratedProperties,
-//   getPropsFromElement,
-//   diffHydratedText,
-//   trapClickOnNonInteractiveElement,
-// } from './ReactDOMComponent';
+import {
+  setInitialProperties,
+  // updateProperties,
+  // hydrateProperties,
+  // hydrateText,
+  // diffHydratedProperties,
+  // getPropsFromElement,
+  // diffHydratedText,
+  // trapClickOnNonInteractiveElement,
+} from './ReactDOMComponent';
 // import {hydrateInput} from './ReactDOMInput';
 // import {hydrateTextarea} from './ReactDOMTextarea';
 // import {hydrateSelect} from './ReactDOMSelect';
@@ -805,4 +805,24 @@ export function createInstance(
   // @why 这里需要再深度理解一下
   updateFiberProps(domElement, props);
   return domElement;
+}
+
+export function finalizeInitialChildren(
+  domElement: Instance,
+  type: string,
+  props: Props,
+  hostContext: HostContext,
+): boolean {
+  setInitialProperties(domElement, type, props);
+  switch (type) {
+    case 'button':
+    case 'input':
+    case 'select':
+    case 'textarea':
+      return !!props.autoFocus;
+    case 'img':
+      return true;
+    default:
+      return false;
+  }
 }
