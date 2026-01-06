@@ -20,7 +20,7 @@ import {
   getChildHostContext,
   getRootHostContext,
   HostTransitionContext,
-  // NotPendingTransition,
+  NotPendingTransition,
   isPrimaryRenderer,
 } from './ReactFiberConfig';
 import {createCursor, push, pop} from './ReactFiberStack';
@@ -109,12 +109,46 @@ function pushHostContext(fiber: Fiber): void {
   }
 }
 
+function popHostContext(fiber: Fiber): void {
+  if (contextFiberStackCursor.current === fiber) {
+    // Do not pop unless this Fiber provided the current context.
+    // pushHostContext() only pushes Fibers that provide unique contexts.
+    pop(contextStackCursor, fiber);
+    pop(contextFiberStackCursor, fiber);
+  }
+
+  if (hostTransitionProviderCursor.current === fiber) {
+    // Do not pop unless this Fiber provided the current context. This is mostly
+    // a performance optimization, but conveniently it also prevents a potential
+    // data race where a host provider is upgraded (i.e. memoizedState becomes
+    // non-null) during a concurrent event. This is a bit of a flaw in the way
+    // we upgrade host components, but because we're accounting for it here, it
+    // should be fine.
+    pop(hostTransitionProviderCursor, fiber);
+
+    // When popping the transition provider, we reset the context value back
+    // to `NotPendingTransition`. We can do this because you're not allowed to nest forms. If
+    // we allowed for multiple nested host transition providers, then we'd
+    // need to reset this to the parent provider's status.
+    if (isPrimaryRenderer) {
+      HostTransitionContext._currentValue = NotPendingTransition;
+    } else {
+      HostTransitionContext._currentValue2 = NotPendingTransition;
+    }
+  }
+}
+
+function getRootHostContainer(): Container {
+  const rootInstance = requiredContext(rootInstanceStackCursor.current);
+  return rootInstance;
+}
+
 export {
   getHostContext,
   // getCurrentRootHostContainer,
-  // getRootHostContainer,
+  getRootHostContainer,
   // popHostContainer,
-  // popHostContext,
+  popHostContext,
   pushHostContainer,
   pushHostContext,
 };

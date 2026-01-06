@@ -45,3 +45,7 @@ export type HydrationDiffNode = {
 
 const maxRowLength = 120;
 const idealDepth = 15;
+
+export function describeDiff(rootNode: HydrationDiffNode): string {
+  throw new Error('Not implemented yet.');
+}

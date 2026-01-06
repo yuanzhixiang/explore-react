@@ -37,7 +37,7 @@ import {
 import {
   // shouldSetTextContent,
   supportsHydration,
-  // supportsSingletons,
+  supportsSingletons,
   // getNextHydratableSibling,
   // getNextHydratableSiblingAfterSingleton,
   // getFirstHydratableChild,
@@ -115,6 +115,55 @@ function tryToClaimNextHydratableInstance(fiber: Fiber): void {
   throw new Error('Not implemented yet.');
 }
 
+function popHydrationState(fiber: Fiber): boolean {
+  if (!supportsHydration) {
+    return false;
+  }
+  if (fiber !== hydrationParentFiber) {
+    // We're deeper than the current hydration context, inside an inserted
+    // tree.
+    return false;
+  }
+  if (!isHydrating) {
+    // If we're not currently hydrating but we're in a hydration context, then
+    // we were an insertion and now need to pop up reenter hydration of our
+    // siblings.
+    popToNextHostParent(fiber);
+    isHydrating = true;
+    return false;
+  }
+
+  const tag = fiber.tag;
+
+  if (supportsSingletons) {
+    // With float we never clear the Root, or Singleton instances. We also do not clear Instances
+    // that have singleton text content
+    throw new Error('Not implemented yet.');
+  } else {
+    throw new Error('Not implemented yet.');
+  }
+  throw new Error('Not implemented yet.');
+}
+
+function popToNextHostParent(fiber: Fiber): void {
+  hydrationParentFiber = fiber.return;
+  while (hydrationParentFiber) {
+    switch (hydrationParentFiber.tag) {
+      case HostComponent:
+      case ActivityComponent:
+      case SuspenseComponent:
+        rootOrSingletonContext = false;
+        return;
+      case HostSingleton:
+      case HostRoot:
+        rootOrSingletonContext = true;
+        return;
+      default:
+        hydrationParentFiber = hydrationParentFiber.return;
+    }
+  }
+}
+
 export {
   // warnIfHydrating,
   // enterHydrationState,
@@ -131,5 +180,5 @@ export {
   // prepareToHydrateHostTextInstance,
   // prepareToHydrateHostActivityInstance,
   // prepareToHydrateHostSuspenseInstance,
-  // popHydrationState,
+  popHydrationState,
 };

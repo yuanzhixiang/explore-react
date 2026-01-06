@@ -224,7 +224,7 @@ import {
   beginWork,
   // replayFunctionComponent,
 } from './ReactFiberBeginWork';
-// import {completeWork} from './ReactFiberCompleteWork';
+import {completeWork} from './ReactFiberCompleteWork';
 // import {unwindWork, unwindInterruptedWork} from './ReactFiberUnwindWork';
 // import {
 //   throwException,
@@ -275,74 +275,74 @@ import {
   // getConcurrentlyUpdatedLanes,
 } from './ReactFiberConcurrentUpdates';
 
-// import {
-//   blockingClampTime,
-//   blockingUpdateTime,
-//   blockingUpdateTask,
-//   blockingUpdateType,
-//   blockingUpdateMethodName,
-//   blockingUpdateComponentName,
-//   blockingEventTime,
-//   blockingEventType,
-//   blockingEventRepeatTime,
-//   blockingSuspendedTime,
-//   gestureClampTime,
-//   gestureUpdateTime,
-//   gestureUpdateTask,
-//   gestureUpdateType,
-//   gestureUpdateMethodName,
-//   gestureUpdateComponentName,
-//   gestureEventTime,
-//   gestureEventType,
-//   gestureEventRepeatTime,
-//   gestureSuspendedTime,
-//   transitionClampTime,
-//   transitionStartTime,
-//   transitionUpdateTime,
-//   transitionUpdateTask,
-//   transitionUpdateType,
-//   transitionUpdateMethodName,
-//   transitionUpdateComponentName,
-//   transitionEventTime,
-//   transitionEventType,
-//   transitionEventRepeatTime,
-//   transitionSuspendedTime,
-//   clearBlockingTimers,
-//   clearGestureTimers,
-//   clearGestureUpdates,
-//   clearTransitionTimers,
-//   clampBlockingTimers,
-//   clampGestureTimers,
-//   clampTransitionTimers,
-//   clampRetryTimers,
-//   clampIdleTimers,
-//   markNestedUpdateScheduled,
-//   renderStartTime,
-//   commitStartTime,
-//   commitEndTime,
-//   commitErrors,
-//   recordRenderTime,
-//   recordCommitTime,
-//   recordCommitEndTime,
-//   startProfilerTimer,
-//   stopProfilerTimerIfRunningAndRecordDuration,
-//   stopProfilerTimerIfRunningAndRecordIncompleteDuration,
-//   trackSuspendedTime,
-//   startYieldTimer,
-//   yieldStartTime,
-//   yieldReason,
-//   startPingTimerByLanes,
-//   recordEffectError,
-//   resetCommitErrors,
-//   PINGED_UPDATE,
-//   SPAWNED_UPDATE,
-//   startAnimating,
-//   stopAnimating,
-//   animatingLanes,
-//   retryClampTime,
-//   idleClampTime,
-//   animatingTask,
-// } from './ReactProfilerTimer';
+import {
+  //   blockingClampTime,
+  //   blockingUpdateTime,
+  //   blockingUpdateTask,
+  //   blockingUpdateType,
+  //   blockingUpdateMethodName,
+  //   blockingUpdateComponentName,
+  //   blockingEventTime,
+  //   blockingEventType,
+  //   blockingEventRepeatTime,
+  //   blockingSuspendedTime,
+  //   gestureClampTime,
+  //   gestureUpdateTime,
+  //   gestureUpdateTask,
+  //   gestureUpdateType,
+  //   gestureUpdateMethodName,
+  //   gestureUpdateComponentName,
+  //   gestureEventTime,
+  //   gestureEventType,
+  //   gestureEventRepeatTime,
+  //   gestureSuspendedTime,
+  //   transitionClampTime,
+  //   transitionStartTime,
+  //   transitionUpdateTime,
+  //   transitionUpdateTask,
+  //   transitionUpdateType,
+  //   transitionUpdateMethodName,
+  //   transitionUpdateComponentName,
+  //   transitionEventTime,
+  //   transitionEventType,
+  //   transitionEventRepeatTime,
+  //   transitionSuspendedTime,
+  //   clearBlockingTimers,
+  //   clearGestureTimers,
+  //   clearGestureUpdates,
+  //   clearTransitionTimers,
+  //   clampBlockingTimers,
+  //   clampGestureTimers,
+  //   clampTransitionTimers,
+  //   clampRetryTimers,
+  //   clampIdleTimers,
+  //   markNestedUpdateScheduled,
+  //   renderStartTime,
+  //   commitStartTime,
+  //   commitEndTime,
+  //   commitErrors,
+  //   recordRenderTime,
+  //   recordCommitTime,
+  //   recordCommitEndTime,
+  startProfilerTimer,
+  //   stopProfilerTimerIfRunningAndRecordDuration,
+  //   stopProfilerTimerIfRunningAndRecordIncompleteDuration,
+  //   trackSuspendedTime,
+  //   startYieldTimer,
+  //   yieldStartTime,
+  //   yieldReason,
+  //   startPingTimerByLanes,
+  //   recordEffectError,
+  //   resetCommitErrors,
+  //   PINGED_UPDATE,
+  //   SPAWNED_UPDATE,
+  //   startAnimating,
+  //   stopAnimating,
+  //   animatingLanes,
+  //   retryClampTime,
+  //   idleClampTime,
+  //   animatingTask,
+} from './ReactProfilerTimer';
 
 // // DEV stuff
 // import getComponentNameFromFiber from 'react-reconciler/src/getComponentNameFromFiber';
@@ -1168,8 +1168,37 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
   // Attempt to complete the current unit of work, then move to the next
   // sibling. If there are no more siblings, return to the parent fiber.
   let completedWork: Fiber = unitOfWork;
+  do {
+    if ((completedWork.flags & Incomplete) !== NoFlags) {
+      throw new Error('Not implemented yet.');
+    }
 
-  throw new Error('Not implemented yet.');
+    // The current, flushed, state of this fiber is the alternate. Ideally
+    // nothing should rely on this, but relying on it here means that we don't
+    // need an additional field on the work in progress.
+    const current = completedWork.alternate;
+    const returnFiber = completedWork.return;
+
+    let next;
+    startProfilerTimer(completedWork);
+    if (__DEV__) {
+      next = runWithFiberInDEV(
+        completedWork,
+        completeWork,
+        current,
+        completedWork,
+        entangledRenderLanes,
+      );
+    } else {
+      next = completeWork(current, completedWork, entangledRenderLanes);
+    }
+    throw new Error('Not implemented yet.');
+  } while (completedWork !== null);
+
+  // We've reached the root.
+  if (workInProgressRootExitStatus === RootInProgress) {
+    workInProgressRootExitStatus = RootCompleted;
+  }
 }
 
 // 这个函数用于设置 Hooks 的 dispatcher，在渲染开始前调用

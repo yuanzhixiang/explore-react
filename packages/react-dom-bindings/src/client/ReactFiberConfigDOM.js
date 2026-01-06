@@ -90,7 +90,7 @@ import {
 // import {getSelectionInformation, restoreSelection} from './ReactInputSelection';
 // import setTextContent from './setTextContent';
 import {
-  // validateDOMNesting,
+  validateDOMNesting,
   // validateTextNesting,
   updatedAncestorInfoDev,
 } from './validateDOMNesting';
@@ -656,4 +656,37 @@ export function shouldSetTextContent(type: string, props: Props): boolean {
       props.dangerouslySetInnerHTML !== null &&
       props.dangerouslySetInnerHTML.__html != null)
   );
+}
+
+function getOwnerDocumentFromRootContainer(
+  rootContainerElement: Element | Document | DocumentFragment,
+): Document {
+  return rootContainerElement.nodeType === DOCUMENT_NODE
+    ? (rootContainerElement: any)
+    : rootContainerElement.ownerDocument;
+}
+
+export function createInstance(
+  type: string,
+  props: Props,
+  rootContainerInstance: Container,
+  hostContext: HostContext,
+  internalInstanceHandle: Object,
+): Instance {
+  let hostContextProd: HostContextProd;
+  if (__DEV__) {
+    // TODO: take namespace into account when validating.
+    const hostContextDev: HostContextDev = (hostContext: any);
+    validateDOMNesting(type, hostContextDev.ancestorInfo);
+    hostContextProd = hostContextDev.context;
+  } else {
+    hostContextProd = (hostContext: any);
+  }
+
+  const ownerDocument = getOwnerDocumentFromRootContainer(
+    rootContainerInstance,
+  );
+
+  let domElement: Instance;
+  throw new Error('Not implemented yet.');
 }
