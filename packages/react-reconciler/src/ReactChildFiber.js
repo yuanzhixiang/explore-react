@@ -93,6 +93,39 @@ type ChildReconciler = (
   lanes: Lanes,
 ) => Fiber | null;
 
+let didWarnAboutMaps;
+let didWarnAboutGenerators;
+let ownerHasKeyUseWarning;
+let ownerHasFunctionTypeWarning;
+let ownerHasSymbolTypeWarning;
+let warnForMissingKey = (
+  returnFiber: Fiber,
+  workInProgress: Fiber,
+  child: mixed,
+) => {};
+
+if (__DEV__) {
+  didWarnAboutMaps = false;
+  didWarnAboutGenerators = false;
+
+  /**
+   * Warn if there's no key explicitly set on dynamic arrays of children or
+   * object keys are not valid. This allows us to keep track of children between
+   * updates.
+   */
+  ownerHasKeyUseWarning = ({}: {[string]: boolean});
+  ownerHasFunctionTypeWarning = ({}: {[string]: boolean});
+  ownerHasSymbolTypeWarning = ({}: {[string]: boolean});
+
+  warnForMissingKey = (
+    returnFiber: Fiber,
+    workInProgress: Fiber,
+    child: mixed,
+  ) => {
+    throw new Error('Not implemented yet.');
+  };
+}
+
 function coerceRef(workInProgress: Fiber, element: ReactElement): void {
   // TODO: This is a temporary, intermediate step. Now that enableRefAsProp is on,
   // we should resolve the `ref` prop during the begin phase of the component
@@ -123,6 +156,108 @@ function pushDebugInfo(
   return previousDebugInfo;
 }
 
+function getCurrentDebugTask(): null | ConsoleTask {
+  // Get the debug task of the parent Server Component if there is one.
+  if (__DEV__) {
+    const debugInfo = currentDebugInfo;
+    if (debugInfo != null) {
+      for (let i = debugInfo.length - 1; i >= 0; i--) {
+        if (debugInfo[i].name != null) {
+          const componentInfo: ReactComponentInfo = debugInfo[i];
+          const debugTask: ?ConsoleTask = componentInfo.debugTask;
+          if (debugTask != null) {
+            return debugTask;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function warnOnFunctionType(returnFiber: Fiber, invalidChild: Function) {
+  const debugTask = getCurrentDebugTask();
+  if (__DEV__ && debugTask !== null) {
+    debugTask.run(warnOnFunctionTypeImpl.bind(null, returnFiber, invalidChild));
+  } else {
+    warnOnFunctionTypeImpl(returnFiber, invalidChild);
+  }
+}
+
+function warnOnFunctionTypeImpl(returnFiber: Fiber, invalidChild: Function) {
+  if (__DEV__) {
+    const parentName = getComponentNameFromFiber(returnFiber) || 'Component';
+
+    if (ownerHasFunctionTypeWarning[parentName]) {
+      return;
+    }
+    ownerHasFunctionTypeWarning[parentName] = true;
+
+    const name = invalidChild.displayName || invalidChild.name || 'Component';
+
+    if (returnFiber.tag === HostRoot) {
+      console.error(
+        'Functions are not valid as a React child. This may happen if ' +
+          'you return %s instead of <%s /> from render. ' +
+          'Or maybe you meant to call this function rather than return it.\n' +
+          '  root.render(%s)',
+        name,
+        name,
+        name,
+      );
+    } else {
+      console.error(
+        'Functions are not valid as a React child. This may happen if ' +
+          'you return %s instead of <%s /> from render. ' +
+          'Or maybe you meant to call this function rather than return it.\n' +
+          '  <%s>{%s}</%s>',
+        name,
+        name,
+        parentName,
+        name,
+        parentName,
+      );
+    }
+  }
+}
+
+function warnOnSymbolType(returnFiber: Fiber, invalidChild: symbol) {
+  const debugTask = getCurrentDebugTask();
+  if (__DEV__ && debugTask !== null) {
+    debugTask.run(warnOnSymbolTypeImpl.bind(null, returnFiber, invalidChild));
+  } else {
+    warnOnSymbolTypeImpl(returnFiber, invalidChild);
+  }
+}
+
+function warnOnSymbolTypeImpl(returnFiber: Fiber, invalidChild: symbol) {
+  if (__DEV__) {
+    const parentName = getComponentNameFromFiber(returnFiber) || 'Component';
+
+    if (ownerHasSymbolTypeWarning[parentName]) {
+      return;
+    }
+    ownerHasSymbolTypeWarning[parentName] = true;
+
+    // eslint-disable-next-line react-internal/safe-string-coercion
+    const name = String(invalidChild);
+
+    if (returnFiber.tag === HostRoot) {
+      console.error(
+        'Symbols are not valid as a React child.\n' + '  root.render(%s)',
+        name,
+      );
+    } else {
+      console.error(
+        'Symbols are not valid as a React child.\n' + '  <%s>%s</%s>',
+        parentName,
+        name,
+        parentName,
+      );
+    }
+  }
+}
+
 // This wrapper function exists because I expect to clone the code in each path
 // to be able to optimize each path individually by branching early. This needs
 // a compiler or we can do it manually. Helpers that don't need this branching
@@ -138,7 +273,19 @@ function createChildReconciler(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
   ): null {
-    throw new Error('Not implemented');
+    if (!shouldTrackSideEffects) {
+      // Noop.
+      return null;
+    }
+
+    // TODO: For the shouldClone case, this could be micro-optimized a bit by
+    // assuming that after the first child we've already added everything.
+    let childToDelete = currentFirstChild;
+    while (childToDelete !== null) {
+      deleteChild(returnFiber, childToDelete);
+      childToDelete = childToDelete.sibling;
+    }
+    return null;
   }
 
   function mapRemainingChildren(
@@ -372,7 +519,17 @@ function createChildReconciler(
       throw new Error('Not implemented yet.');
     }
 
-    throw new Error('Not implemented yet.');
+    if (__DEV__) {
+      if (typeof newChild === 'function') {
+        warnOnFunctionType(returnFiber, newChild);
+      }
+      if (typeof newChild === 'symbol') {
+        warnOnSymbolType(returnFiber, newChild);
+      }
+    }
+
+    // Remaining cases are all treated as empty.
+    return deleteRemainingChildren(returnFiber, currentFirstChild);
   }
 
   function reconcileChildFibers(
