@@ -7,7 +7,7 @@
  * @flow
  */
 
-// import type {ReactElement} from 'shared/ReactElementType';
+import type {ReactElement} from 'shared/ReactElementType';
 import type {
   ReactFragment,
   ReactPortal,
@@ -29,12 +29,12 @@ import type {
 // import type {ViewTransitionState} from './ReactFiberViewTransitionComponent';
 import type {TracingMarkerInstance} from './ReactFiberTracingMarkerComponent';
 
-// import {
-//   supportsResources,
-//   supportsSingletons,
-//   isHostHoistableType,
-//   isHostSingletonType,
-// } from './ReactFiberConfig';
+import {
+  supportsResources,
+  supportsSingletons,
+  isHostHoistableType,
+  isHostSingletonType,
+} from './ReactFiberConfig';
 import {
   enableProfilerTimer,
   enableScopeAPI,
@@ -112,7 +112,7 @@ import {
   REACT_ACTIVITY_TYPE,
 } from 'shared/ReactSymbols';
 import {TransitionTracingMarker} from './ReactFiberTracingMarkerComponent';
-// import {getHostContext} from './ReactFiberHostContext';
+import {getHostContext} from './ReactFiberHostContext';
 import type {ReactComponentInfo} from '../../shared/ReactTypes';
 // import isArray from 'shared/isArray';
 // import getComponentNameFromType from 'shared/getComponentNameFromType';
@@ -440,5 +440,77 @@ export function createFiberFromTypeAndProps(
   mode: TypeOfMode,
   lanes: Lanes,
 ): Fiber {
-  throw new Error('Not implemented yet.');
+  let fiberTag: WorkTag = FunctionComponent;
+  // The resolved type is set if we know what the final type will be. I.e. it's not lazy.
+  let resolvedType = type;
+
+  if (typeof type === 'function') {
+    throw new Error('Not implemented yet.');
+  } else if (typeof type === 'string') {
+    if (supportsResources && supportsSingletons) {
+      const hostContext = getHostContext();
+      fiberTag = isHostHoistableType(type, pendingProps, hostContext)
+        ? HostHoistable
+        : isHostSingletonType(type)
+          ? HostSingleton
+          : HostComponent;
+    } else if (supportsResources) {
+      throw new Error('Not implemented yet.');
+    } else if (supportsSingletons) {
+      throw new Error('Not implemented yet.');
+    } else {
+      throw new Error('Not implemented yet.');
+    }
+  } else {
+    throw new Error('Not implemented yet.');
+  }
+
+  const fiber = createFiber(fiberTag, pendingProps, key, mode);
+  fiber.elementType = type;
+  fiber.type = resolvedType;
+  fiber.lanes = lanes;
+
+  if (__DEV__) {
+    fiber._debugOwner = owner;
+  }
+
+  return fiber;
+}
+
+export function createFiberFromThrow(
+  error: mixed,
+  mode: TypeOfMode,
+  lanes: Lanes,
+): Fiber {
+  const fiber = createFiber(Throw, error, null, mode);
+  fiber.lanes = lanes;
+  return fiber;
+}
+
+export function createFiberFromElement(
+  element: ReactElement,
+  mode: TypeOfMode,
+  lanes: Lanes,
+): Fiber {
+  let owner = null;
+  if (__DEV__) {
+    owner = element._owner;
+  }
+  const type = element.type;
+  const key = element.key;
+  const pendingProps = element.props;
+  const fiber = createFiberFromTypeAndProps(
+    type,
+    key,
+    pendingProps,
+    owner,
+    mode,
+    lanes,
+  );
+  if (__DEV__) {
+    fiber._debugOwner = element._owner;
+    fiber._debugStack = element._debugStack;
+    fiber._debugTask = element._debugTask;
+  }
+  return fiber;
 }

@@ -451,3 +451,169 @@ function getChildHostContextProd(
 // -------------------
 
 export const supportsHydration = true;
+
+// -------------------
+//     Resources
+// -------------------
+
+export const supportsResources = true;
+
+type HoistableTagType = 'link' | 'meta' | 'title';
+type TResource<
+  T: 'stylesheet' | 'style' | 'script' | 'void',
+  S: null | {...},
+> = {
+  type: T,
+  instance: null | Instance,
+  count: number,
+  state: S,
+};
+type StylesheetResource = TResource<'stylesheet', StylesheetState>;
+type StyleTagResource = TResource<'style', null>;
+type StyleResource = StyleTagResource | StylesheetResource;
+type ScriptResource = TResource<'script', null>;
+type VoidResource = TResource<'void', null>;
+export type Resource = StyleResource | ScriptResource | VoidResource;
+
+type LoadingState = number;
+const NotLoaded = /*       */ 0b000;
+const Loaded = /*          */ 0b001;
+const Errored = /*         */ 0b010;
+const Settled = /*         */ 0b011;
+const Inserted = /*        */ 0b100;
+
+type StylesheetState = {
+  loading: LoadingState,
+  preload: null | HTMLLinkElement,
+};
+
+type StyleTagProps = {
+  'data-href': string,
+  'data-precedence': string,
+  [string]: mixed,
+};
+type StylesheetProps = {
+  rel: 'stylesheet',
+  href: string,
+  'data-precedence': string,
+  [string]: mixed,
+};
+
+type ScriptProps = {
+  src: string,
+  async: true,
+  [string]: mixed,
+};
+
+type PreloadProps = {
+  rel: 'preload',
+  href: ?string,
+  [string]: mixed,
+};
+type PreloadModuleProps = {
+  rel: 'modulepreload',
+  href: string,
+  [string]: mixed,
+};
+
+export type RootResources = {
+  hoistableStyles: Map<string, StyleResource>,
+  hoistableScripts: Map<string, ScriptResource>,
+};
+
+// -------------------
+//     Singletons
+// -------------------
+
+export const supportsSingletons = true;
+
+// 用于判断一个元素是否是可提升（hoistable）的宿主类型，
+// 即可以被提升到 <head> 或文档顶层的元素
+// 提升（Hoist）= 把元素从组件渲染的位置移动到 <head> 里
+export function isHostHoistableType(
+  type: string,
+  props: RawProps,
+  hostContext: HostContext,
+): boolean {
+  let outsideHostContainerContext: boolean;
+  let hostContextProd: HostContextProd;
+  if (__DEV__) {
+    const hostContextDev: HostContextDev = (hostContext: any);
+    // We can only render resources when we are not within the host container context
+    outsideHostContainerContext =
+      !hostContextDev.ancestorInfo.containerTagInScope;
+    hostContextProd = hostContextDev.context;
+  } else {
+    hostContextProd = (hostContext: any);
+  }
+
+  // Global opt out of hoisting for anything in SVG Namespace or anything with an itemProp inside an itemScope
+  if (hostContextProd === HostContextNamespaceSvg || props.itemProp != null) {
+    if (__DEV__) {
+      if (
+        outsideHostContainerContext &&
+        props.itemProp != null &&
+        (type === 'meta' ||
+          type === 'title' ||
+          type === 'style' ||
+          type === 'link' ||
+          type === 'script')
+      ) {
+        console.error(
+          'Cannot render a <%s> outside the main document if it has an `itemProp` prop. `itemProp` suggests the tag belongs to an' +
+            ' `itemScope` which can appear anywhere in the DOM. If you were intending for React to hoist this <%s> remove the `itemProp` prop.' +
+            ' Otherwise, try moving this tag into the <head> or <body> of the Document.',
+          type,
+          type,
+        );
+      }
+    }
+    return false;
+  }
+  // 哪些类型可提升
+  switch (type) {
+    // ✓ 可提升
+    case 'meta':
+    // ✓ 可提升
+    case 'title': {
+      return true;
+    }
+    // 需要 precedence + href
+    case 'style': {
+      throw new Error('Not implemented yet.');
+    }
+    // 需要 rel="stylesheet" 等条件
+    case 'link': {
+      if (
+        typeof props.rel !== 'string' ||
+        typeof props.href !== 'string' ||
+        props.href === '' ||
+        props.onLoad ||
+        props.onError
+      ) {
+        throw new Error('Not implemented yet.');
+      }
+      switch (props.rel) {
+        case 'stylesheet': {
+          throw new Error('Not implemented yet.');
+        }
+        default: {
+          throw new Error('Not implemented yet.');
+        }
+      }
+    }
+    // 需要 async + src
+    case 'script': {
+      throw new Error('Not implemented yet.');
+    }
+    case 'noscript':
+    case 'template': {
+      throw new Error('Not implemented yet.');
+    }
+  }
+  return false;
+}
+
+export function isHostSingletonType(type: string): boolean {
+  return type === 'html' || type === 'head' || type === 'body';
+}

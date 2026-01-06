@@ -37,6 +37,18 @@ const rootInstanceStackCursor: StackCursor<Container | null> =
 const hostTransitionProviderCursor: StackCursor<Fiber | null> =
   createCursor(null);
 
+function requiredContext<Value>(c: Value | null): Value {
+  if (__DEV__) {
+    if (c === null) {
+      console.error(
+        'Expected host context to exist. This error is likely caused by a bug ' +
+          'in React. Please file an issue.',
+      );
+    }
+  }
+  return (c: any);
+}
+
 function pushHostContainer(fiber: Fiber, nextRootInstance: Container): void {
   // Push current root instance onto the stack;
   // This allows us to reset root when portals are popped.
@@ -57,8 +69,13 @@ function pushHostContainer(fiber: Fiber, nextRootInstance: Container): void {
   push(contextStackCursor, nextRootContext, fiber);
 }
 
+function getHostContext(): HostContext {
+  const context = requiredContext(contextStackCursor.current);
+  return context;
+}
+
 export {
-  // getHostContext,
+  getHostContext,
   // getCurrentRootHostContainer,
   // getRootHostContainer,
   // popHostContainer,

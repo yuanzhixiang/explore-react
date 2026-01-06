@@ -7,7 +7,7 @@
  * @flow
  */
 
-// import type {ReactElement} from 'shared/ReactElementType';
+import type {ReactElement} from 'shared/ReactElementType';
 import type {
   ReactPortal,
   Thenable,
@@ -56,25 +56,25 @@ import {
   enableOptimisticKey,
 } from 'shared/ReactFeatureFlags';
 
-// import {
-//   createWorkInProgress,
-//   resetWorkInProgress,
-//   createFiberFromElement,
-//   createFiberFromFragment,
-//   createFiberFromText,
-//   createFiberFromPortal,
-//   createFiberFromThrow,
-// } from './ReactFiber';
+import {
+  createWorkInProgress,
+  // resetWorkInProgress,
+  createFiberFromElement,
+  // createFiberFromFragment,
+  // createFiberFromText,
+  // createFiberFromPortal,
+  createFiberFromThrow,
+} from './ReactFiber';
 // import {isCompatibleFamilyForHotReloading} from './ReactFiberHotReloading';
 // import {getIsHydrating} from './ReactFiberHydrationContext';
 // import {pushTreeFork} from './ReactFiberTreeContext';
-// import {
-//   SuspenseException,
-//   SuspenseActionException,
-//   createThenableState,
-//   trackUsedThenable,
-//   resolveLazy,
-// } from './ReactFiberThenable';
+import {
+  SuspenseException,
+  SuspenseActionException,
+  // createThenableState,
+  // trackUsedThenable,
+  // resolveLazy,
+} from './ReactFiberThenable';
 // import {readContextDuringReconciliation} from './ReactFiberNewContext';
 
 import {runWithFiberInDEV} from './ReactCurrentFiber';
@@ -93,6 +93,36 @@ type ChildReconciler = (
   lanes: Lanes,
 ) => Fiber | null;
 
+function coerceRef(workInProgress: Fiber, element: ReactElement): void {
+  // TODO: This is a temporary, intermediate step. Now that enableRefAsProp is on,
+  // we should resolve the `ref` prop during the begin phase of the component
+  // it's attached to (HostComponent, ClassComponent, etc).
+  const refProp = element.props.ref;
+  // TODO: With enableRefAsProp now rolled out, we shouldn't use the `ref` field. We
+  // should always read the ref from the prop.
+  workInProgress.ref = refProp !== undefined ? refProp : null;
+}
+
+function pushDebugInfo(
+  debugInfo: null | ReactDebugInfo,
+): null | ReactDebugInfo {
+  if (!__DEV__) {
+    return null;
+  }
+  const previousDebugInfo = currentDebugInfo;
+  if (debugInfo == null) {
+    // Leave inplace
+  } else if (previousDebugInfo === null) {
+    currentDebugInfo = debugInfo;
+  } else {
+    // If we have two debugInfo, we need to create a new one. This makes the array no longer
+    // live so we'll miss any future updates if we received more so ideally we should always
+    // do this after both have fully resolved/unsuspended.
+    currentDebugInfo = previousDebugInfo.concat(debugInfo);
+  }
+  return previousDebugInfo;
+}
+
 // This wrapper function exists because I expect to clone the code in each path
 // to be able to optimize each path individually by branching early. This needs
 // a compiler or we can do it manually. Helpers that don't need this branching
@@ -100,7 +130,325 @@ type ChildReconciler = (
 function createChildReconciler(
   shouldTrackSideEffects: boolean,
 ): ChildReconciler {
-  throw new Error('Not implemented');
+  function deleteChild(returnFiber: Fiber, childToDelete: Fiber): void {
+    throw new Error('Not implemented');
+  }
+
+  function deleteRemainingChildren(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+  ): null {
+    throw new Error('Not implemented');
+  }
+
+  function mapRemainingChildren(
+    currentFirstChild: Fiber,
+  ): Map<string | number | ReactOptimisticKey, Fiber> {
+    throw new Error('Not implemented');
+  }
+
+  function useFiber(fiber: Fiber, pendingProps: mixed): Fiber {
+    throw new Error('Not implemented');
+  }
+
+  function placeChild(
+    newFiber: Fiber,
+    lastPlacedIndex: number,
+    newIndex: number,
+  ): number {
+    throw new Error('Not implemented');
+  }
+
+  function placeSingleChild(newFiber: Fiber): Fiber {
+    throw new Error('Not implemented');
+  }
+
+  function updateTextNode(
+    returnFiber: Fiber,
+    current: Fiber | null,
+    textContent: string,
+    lanes: Lanes,
+  ) {
+    throw new Error('Not implemented');
+  }
+
+  function updateElement(
+    returnFiber: Fiber,
+    current: Fiber | null,
+    element: ReactElement,
+    lanes: Lanes,
+  ): Fiber {
+    throw new Error('Not implemented yet.');
+  }
+
+  function updatePortal(
+    returnFiber: Fiber,
+    current: Fiber | null,
+    portal: ReactPortal,
+    lanes: Lanes,
+  ): Fiber {
+    throw new Error('Not implemented yet.');
+  }
+
+  function updateFragment(
+    returnFiber: Fiber,
+    current: Fiber | null,
+    fragment: Iterable<React$Node>,
+    lanes: Lanes,
+    key: ReactKey,
+  ): Fiber {
+    throw new Error('Not implemented yet.');
+  }
+
+  function createChild(
+    returnFiber: Fiber,
+    newChild: any,
+    lanes: Lanes,
+  ): Fiber | null {
+    throw new Error('Not implemented yet.');
+  }
+
+  function updateSlot(
+    returnFiber: Fiber,
+    oldFiber: Fiber | null,
+    newChild: any,
+    lanes: Lanes,
+  ): Fiber | null {
+    throw new Error('Not implemented yet.');
+  }
+
+  function updateFromMap(
+    existingChildren: Map<string | number | ReactOptimisticKey, Fiber>,
+    returnFiber: Fiber,
+    newIdx: number,
+    newChild: any,
+    lanes: Lanes,
+  ): Fiber | null {
+    throw new Error('Not implemented yet.');
+  }
+
+  /**
+   * Warns if there is a duplicate or missing key
+   */
+  function warnOnInvalidKey(
+    returnFiber: Fiber,
+    workInProgress: Fiber,
+    child: mixed,
+    knownKeys: Set<string> | null,
+  ): Set<string> | null {
+    throw new Error('Not implemented yet.');
+  }
+
+  function reconcileChildrenArray(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChildren: Array<any>,
+    lanes: Lanes,
+  ): Fiber | null {
+    throw new Error('Not implemented yet.');
+  }
+
+  function reconcileChildrenIteratable(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChildrenIterable: Iterable<mixed>,
+    lanes: Lanes,
+  ): Fiber | null {
+    throw new Error('Not implemented yet.');
+  }
+
+  function reconcileChildrenAsyncIteratable(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChildrenIterable: AsyncIterable<mixed>,
+    lanes: Lanes,
+  ): Fiber | null {
+    throw new Error('Not implemented yet.');
+  }
+
+  function reconcileChildrenIterator(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChildren: ?Iterator<mixed>,
+    lanes: Lanes,
+  ): Fiber | null {
+    throw new Error('Not implemented yet.');
+  }
+
+  function reconcileSingleTextNode(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    textContent: string,
+    lanes: Lanes,
+  ): Fiber {
+    throw new Error('Not implemented');
+  }
+
+  function reconcileSingleElement(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    element: ReactElement,
+    lanes: Lanes,
+  ): Fiber {
+    throw new Error('Not implemented');
+  }
+
+  function reconcileSinglePortal(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    portal: ReactPortal,
+    lanes: Lanes,
+  ): Fiber {
+    throw new Error('Not implemented');
+  }
+
+  // This API will tag the children with the side-effect of the reconciliation
+  // itself. They will be added to the side-effect list as we pass through the
+  // children and the parent.
+  // 这是 diff 算法的核心入口，负责对比新旧子节点，决定如何更新
+  function reconcileChildFibersImpl(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChild: any,
+    lanes: Lanes,
+  ): Fiber | null {
+    // This function is only recursive for Usables/Lazy and not nested arrays.
+    // That's so that using a Lazy wrapper is unobservable to the Fragment
+    // convention.
+    // If the top level item is an array, we treat it as a set of children,
+    // not as a fragment. Nested arrays on the other hand will be treated as
+    // fragment nodes. Recursion happens at the normal flow.
+
+    // Handle top level unkeyed fragments without refs (enableFragmentRefs)
+    // as if they were arrays. This leads to an ambiguity between <>{[...]}</> and <>...</>.
+    // We treat the ambiguous cases above the same.
+    // We don't use recursion here because a fragment inside a fragment
+    // is no longer considered "top level" for these purposes.
+    const isUnkeyedUnrefedTopLevelFragment =
+      typeof newChild === 'object' &&
+      newChild !== null &&
+      newChild.type === REACT_FRAGMENT_TYPE &&
+      newChild.key === null &&
+      (enableFragmentRefs ? newChild.props.ref === undefined : true);
+
+    if (isUnkeyedUnrefedTopLevelFragment) {
+      throw new Error('Not implemented yet.');
+    }
+
+    // Handle object types
+    if (typeof newChild === 'object' && newChild !== null) {
+      switch (newChild.$$typeof) {
+        case REACT_ELEMENT_TYPE: {
+          const created = createFiberFromElement(
+            newChild,
+            returnFiber.mode,
+            lanes,
+          );
+          coerceRef(created, newChild);
+          created.return = returnFiber;
+          if (__DEV__) {
+            const prevDebugInfo = pushDebugInfo(newChild._debugInfo);
+            created._debugInfo = currentDebugInfo;
+            currentDebugInfo = prevDebugInfo;
+          }
+          return created;
+        }
+        case REACT_PORTAL_TYPE: {
+          throw new Error('Not implemented yet.');
+        }
+        case REACT_LAZY_TYPE: {
+          throw new Error('Not implemented yet.');
+        }
+      }
+
+      throw new Error('Not implemented yet.');
+    }
+
+    if (
+      (typeof newChild === 'string' && newChild !== '') ||
+      typeof newChild === 'number' ||
+      typeof newChild === 'bigint'
+    ) {
+      throw new Error('Not implemented yet.');
+    }
+
+    throw new Error('Not implemented yet.');
+  }
+
+  function reconcileChildFibers(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChild: any,
+    lanes: Lanes,
+  ): Fiber | null {
+    const prevDebugInfo = currentDebugInfo;
+    currentDebugInfo = null;
+    try {
+      // This indirection only exists so we can reset `thenableState` at the end.
+      // It should get inlined by Closure.
+      thenableIndexCounter = 0;
+      const firstChildFiber = reconcileChildFibersImpl(
+        returnFiber,
+        currentFirstChild,
+        newChild,
+        lanes,
+      );
+      thenableState = null;
+      // Don't bother to reset `thenableIndexCounter` to 0 because it always gets
+      // set at the beginning.
+      return firstChildFiber;
+    } catch (x) {
+      if (
+        x === SuspenseException ||
+        x === SuspenseActionException ||
+        (!disableLegacyMode &&
+          (returnFiber.mode & ConcurrentMode) === NoMode &&
+          typeof x === 'object' &&
+          x !== null &&
+          typeof x.then === 'function')
+      ) {
+        // Suspense exceptions need to read the current suspended state before
+        // yielding and replay it using the same sequence so this trick doesn't
+        // work here.
+        // Suspending in legacy mode actually mounts so if we let the child
+        // mount then we delete its state in an update.
+        throw x;
+      }
+      // Something errored during reconciliation but it's conceptually a child that
+      // errored and not the current component itself so we create a virtual child
+      // that throws in its begin phase. That way the current component can handle
+      // the error or suspending if needed.
+      const throwFiber = createFiberFromThrow(x, returnFiber.mode, lanes);
+      throwFiber.return = returnFiber;
+      if (__DEV__) {
+        const debugInfo = (throwFiber._debugInfo = currentDebugInfo);
+        // Conceptually the error's owner should ideally be captured when the
+        // Error constructor is called but we don't override them to capture our
+        // `owner`. So instead, we use the nearest parent as the owner/task of the
+        // error. This is usually the same thing when it's thrown from the same
+        // async component but not if you await a promise started from a different
+        // component/task.
+        // In newer Chrome, Error constructor does capture the Task which is what
+        // is logged by reportError. In that case this debugTask isn't used.
+        throwFiber._debugOwner = returnFiber._debugOwner;
+        throwFiber._debugTask = returnFiber._debugTask;
+        if (debugInfo != null) {
+          for (let i = debugInfo.length - 1; i >= 0; i--) {
+            if (typeof debugInfo[i].stack === 'string') {
+              throwFiber._debugOwner = (debugInfo[i]: any);
+              throwFiber._debugTask = debugInfo[i].debugTask;
+              break;
+            }
+          }
+        }
+      }
+      return throwFiber;
+    } finally {
+      currentDebugInfo = prevDebugInfo;
+    }
+  }
+
+  return reconcileChildFibers;
 }
 
 export const reconcileChildFibers: ChildReconciler =

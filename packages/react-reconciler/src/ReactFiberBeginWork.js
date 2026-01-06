@@ -457,6 +457,17 @@ function beginWork(
     }
   }
 
+  // current 是否为 null 决定了是 mount 还是 update 阶段
+  /*
+
+  这里面 HostRoot 比较特殊，他是提前创建好的，在第一次渲染前就创建好了，所以执行顺序是下面这样
+
+第一次 beginWork: HostRoot → current !== null → Update
+第二次 beginWork: App      → current === null → Mount
+第三次 beginWork: Child    → current === null → Mount
+...
+
+  */
   if (current !== null) {
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;

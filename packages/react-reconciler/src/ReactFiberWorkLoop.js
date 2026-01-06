@@ -1154,6 +1154,21 @@ function performUnitOfWork(unitOfWork: Fiber): void {
       throw new Error('Not implemented yet.');
     }
   }
+
+  unitOfWork.memoizedProps = unitOfWork.pendingProps;
+  if (next === null) {
+    // If this doesn't spawn new work, complete the current work.
+    completeUnitOfWork(unitOfWork);
+  } else {
+    workInProgress = next;
+  }
+}
+
+function completeUnitOfWork(unitOfWork: Fiber): void {
+  // Attempt to complete the current unit of work, then move to the next
+  // sibling. If there are no more siblings, return to the parent fiber.
+  let completedWork: Fiber = unitOfWork;
+
   throw new Error('Not implemented yet.');
 }
 
