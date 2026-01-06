@@ -35,6 +35,8 @@ export function runWithFiberInDEV<A0, A1, A2, A3, A4, T>(
         );
       }
       return callback(arg0, arg1, arg2, arg3, arg4);
+    } catch (e) {
+      console.log('Error occurred during runWithFiberInDEV: ', e);
     } finally {
       setCurrentFiber(previousFiber);
     }

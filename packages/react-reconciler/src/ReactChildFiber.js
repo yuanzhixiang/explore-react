@@ -453,3 +453,4 @@ function createChildReconciler(
 
 export const reconcileChildFibers: ChildReconciler =
   createChildReconciler(true);
+export const mountChildFibers: ChildReconciler = createChildReconciler(false);

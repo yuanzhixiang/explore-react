@@ -196,6 +196,9 @@ function flushWork(initialTime: number) {
       // No catch in prod code path.
       return workLoop(initialTime);
     }
+  } catch (error) {
+    console.log('Error occurred during flushWork: ', error);
+    throw error;
   } finally {
     throw new Error('Not implemented');
   }

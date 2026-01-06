@@ -14,14 +14,14 @@ import type {
   HostContext,
   TransitionStatus,
 } from './ReactFiberConfig';
-// import type {Hook} from './ReactFiberHooks';
+import type {Hook} from './ReactFiberHooks';
 
 import {
-  // getChildHostContext,
+  getChildHostContext,
   getRootHostContext,
-  // HostTransitionContext,
+  HostTransitionContext,
   // NotPendingTransition,
-  // isPrimaryRenderer,
+  isPrimaryRenderer,
 } from './ReactFiberConfig';
 import {createCursor, push, pop} from './ReactFiberStack';
 
@@ -74,6 +74,41 @@ function getHostContext(): HostContext {
   return context;
 }
 
+function pushHostContext(fiber: Fiber): void {
+  const stateHook: Hook | null = fiber.memoizedState;
+  if (stateHook !== null) {
+    // Propagate the current state to all the descendents.
+    // We use Context as an implementation detail for this.
+    //
+    // NOTE: This assumes that there cannot be nested transition providers,
+    // because the only renderer that implements this feature is React DOM,
+    // and forms cannot be nested. If we did support nested providers, then
+    // we would need to push a context value even for host fibers that
+    // haven't been upgraded yet.
+    const transitionStatus: TransitionStatus = stateHook.memoizedState;
+    if (isPrimaryRenderer) {
+      HostTransitionContext._currentValue = transitionStatus;
+    } else {
+      HostTransitionContext._currentValue2 = transitionStatus;
+    }
+
+    // Only provide context if this fiber has been upgraded by a host
+    // transition. We use the same optimization for regular host context below.
+    push(hostTransitionProviderCursor, fiber, fiber);
+  }
+
+  const context: HostContext = requiredContext(contextStackCursor.current);
+  const nextContext = getChildHostContext(context, fiber.type);
+
+  // Don't push this Fiber's context unless it's unique.
+  if (context !== nextContext) {
+    // Track the context and the Fiber that provided it.
+    // This enables us to pop only Fibers that provide unique contexts.
+    push(contextFiberStackCursor, fiber, fiber);
+    push(contextStackCursor, nextContext, fiber);
+  }
+}
+
 export {
   getHostContext,
   // getCurrentRootHostContainer,
@@ -81,5 +116,5 @@ export {
   // popHostContainer,
   // popHostContext,
   pushHostContainer,
-  // pushHostContext,
+  pushHostContext,
 };

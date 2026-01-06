@@ -108,6 +108,13 @@ function getIsHydrating(): boolean {
   return isHydrating;
 }
 
+function tryToClaimNextHydratableInstance(fiber: Fiber): void {
+  if (!isHydrating) {
+    return;
+  }
+  throw new Error('Not implemented yet.');
+}
+
 export {
   // warnIfHydrating,
   // enterHydrationState,
@@ -116,7 +123,7 @@ export {
   // reenterHydrationStateFromDehydratedSuspenseInstance,
   resetHydrationState,
   // claimHydratableSingleton,
-  // tryToClaimNextHydratableInstance,
+  tryToClaimNextHydratableInstance,
   // tryToClaimNextHydratableTextInstance,
   // claimNextHydratableActivityInstance,
   // claimNextHydratableSuspenseInstance,

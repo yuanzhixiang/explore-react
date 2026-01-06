@@ -27,7 +27,7 @@ import type {
 } from 'react-dom/src/shared/ReactDOMTypes';
 import type {TransitionTypes} from 'react/src/ReactTransitionType';
 
-// import {NotPending} from '../shared/ReactDOMFormActions';
+import {NotPending} from '../shared/ReactDOMFormActions';
 
 // import {setSrcObject} from './ReactDOMSrcObject';
 
@@ -616,4 +616,44 @@ export function isHostHoistableType(
 
 export function isHostSingletonType(type: string): boolean {
   return type === 'html' || type === 'head' || type === 'body';
+}
+
+export const NotPendingTransition: TransitionStatus = NotPending;
+export const HostTransitionContext: ReactContext<TransitionStatus> = {
+  $$typeof: REACT_CONTEXT_TYPE,
+  Provider: (null: any),
+  Consumer: (null: any),
+  _currentValue: NotPendingTransition,
+  _currentValue2: NotPendingTransition,
+  _threadCount: 0,
+};
+
+export function getChildHostContext(
+  parentHostContext: HostContext,
+  type: string,
+): HostContext {
+  if (__DEV__) {
+    const parentHostContextDev = ((parentHostContext: any): HostContextDev);
+    const context = getChildHostContextProd(parentHostContextDev.context, type);
+    const ancestorInfo = updatedAncestorInfoDev(
+      parentHostContextDev.ancestorInfo,
+      type,
+    );
+    return {context, ancestorInfo};
+  }
+  const parentNamespace = ((parentHostContext: any): HostContextProd);
+  return getChildHostContextProd(parentNamespace, type);
+}
+
+export function shouldSetTextContent(type: string, props: Props): boolean {
+  return (
+    type === 'textarea' ||
+    type === 'noscript' ||
+    typeof props.children === 'string' ||
+    typeof props.children === 'number' ||
+    typeof props.children === 'bigint' ||
+    (typeof props.dangerouslySetInnerHTML === 'object' &&
+      props.dangerouslySetInnerHTML !== null &&
+      props.dangerouslySetInnerHTML.__html != null)
+  );
 }

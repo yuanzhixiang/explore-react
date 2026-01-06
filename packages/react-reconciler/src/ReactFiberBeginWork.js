@@ -137,7 +137,7 @@ import {
 // } from './ReactFiberHotReloading';
 
 import {
-  // mountChildFibers,
+  mountChildFibers,
   reconcileChildFibers,
   // cloneChildFibers,
   // validateSuspenseListChildren,
@@ -171,7 +171,7 @@ import {
   StrictLegacyMode,
 } from './ReactTypeOfMode';
 import {
-  // shouldSetTextContent,
+  shouldSetTextContent,
   // isSuspenseInstancePending,
   // isSuspenseInstanceFallback,
   // getSuspenseInstanceFallbackErrorDetails,
@@ -186,7 +186,7 @@ import {
 import type {ActivityInstance, SuspenseInstance} from './ReactFiberConfig';
 // import {shouldError, shouldSuspend} from './ReactFiberReconciler';
 import {
-  // pushHostContext,
+  pushHostContext,
   pushHostContainer,
   // getRootHostContainer,
 } from './ReactFiberHostContext';
@@ -243,7 +243,7 @@ import {
   // reenterHydrationStateFromDehydratedSuspenseInstance,
   resetHydrationState,
   // claimHydratableSingleton,
-  // tryToClaimNextHydratableInstance,
+  tryToClaimNextHydratableInstance,
   // tryToClaimNextHydratableTextInstance,
   // claimNextHydratableActivityInstance,
   // claimNextHydratableSuspenseInstance,
@@ -407,7 +407,16 @@ export function reconcileChildren(
   renderLanes: Lanes,
 ) {
   if (current === null) {
-    throw new Error('Not implemented yet.');
+    // If this is a fresh new component that hasn't been rendered yet, we
+    // won't update its child set by applying minimal side-effects. Instead,
+    // we will add them all to the child before it gets rendered. That means
+    // we can optimize this reconciliation pass by not tracking side-effects.
+    workInProgress.child = mountChildFibers(
+      workInProgress,
+      null,
+      nextChildren,
+      renderLanes,
+    );
   } else {
     // If the current child is the same as the work in progress, it means that
     // we haven't yet started any work on these children. Therefore, we use
@@ -626,7 +635,60 @@ function updateHostComponent(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ) {
-  throw new Error('Not implemented yet.');
+  if (current === null) {
+    tryToClaimNextHydratableInstance(workInProgress);
+  }
+
+  pushHostContext(workInProgress);
+
+  const type = workInProgress.type;
+  const nextProps = workInProgress.pendingProps;
+  const prevProps = current !== null ? current.memoizedProps : null;
+
+  let nextChildren = nextProps.children;
+  const isDirectTextChild = shouldSetTextContent(type, nextProps);
+
+  if (isDirectTextChild) {
+    // We special case a direct text child of a host node. This is a common
+    // case. We won't handle it as a reified child. We will instead handle
+    // this in the host environment that also has access to this prop. That
+    // avoids allocating another HostText fiber and traversing it.
+    nextChildren = null;
+  } else if (prevProps !== null && shouldSetTextContent(type, prevProps)) {
+    // If we're switching from a direct text child to a normal child, or to
+    // empty, we need to schedule the text content to be reset.
+    workInProgress.flags |= ContentReset;
+  }
+
+  const memoizedState = workInProgress.memoizedState;
+  if (memoizedState !== null) {
+    throw new Error('Not implemented yet.');
+  }
+
+  markRef(current, workInProgress);
+  reconcileChildren(current, workInProgress, nextChildren, renderLanes);
+  return workInProgress.child;
+}
+
+function markRef(current: Fiber | null, workInProgress: Fiber) {
+  // TODO: Check props.ref instead of fiber.ref when enableRefAsProp is on.
+  const ref = workInProgress.ref;
+  if (ref === null) {
+    if (current !== null && current.ref !== null) {
+      // Schedule a Ref effect
+      workInProgress.flags |= Ref | RefStatic;
+    }
+  } else {
+    if (typeof ref !== 'function' && typeof ref !== 'object') {
+      throw new Error(
+        'Expected ref to be a function, an object returned by React.createRef(), or undefined/null.',
+      );
+    }
+    if (current === null || current.ref !== ref) {
+      // Schedule a Ref effect
+      workInProgress.flags |= Ref | RefStatic;
+    }
+  }
 }
 
 function remountFiber(

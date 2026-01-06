@@ -183,6 +183,14 @@ export type UpdateQueue<S, A> = {
   lastRenderedState: S | null,
 };
 
+export type Hook = {
+  memoizedState: any,
+  baseState: any,
+  baseQueue: Update<any, any> | null,
+  queue: any,
+  next: Hook | null,
+};
+
 function throwInvalidHookError() {
   throw new Error(
     'Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for' +
