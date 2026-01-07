@@ -826,3 +826,17 @@ export function finalizeInitialChildren(
       return false;
   }
 }
+
+// -------------------
+//     Mutation
+// -------------------
+
+export const supportsMutation = true;
+
+export function appendInitialChild(
+  parentInstance: Instance,
+  child: Instance | TextInstance,
+): void {
+  // Note: This should not use moveBefore() because initial are appended while disconnected.
+  parentInstance.appendChild(child);
+}

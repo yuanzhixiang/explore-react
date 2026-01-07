@@ -106,10 +106,10 @@ import {
   createInstance,
   // createTextInstance,
   // resolveSingletonInstance,
-  // appendInitialChild,
+  appendInitialChild,
   finalizeInitialChildren,
   // finalizeHydratedChildren,
-  // supportsMutation,
+  supportsMutation,
   supportsPersistence,
   supportsResources,
   supportsSingletons,
@@ -216,7 +216,44 @@ function appendAllChildren(
   needsVisibilityToggle: boolean,
   isHidden: boolean,
 ) {
-  throw new Error('Not implemented yet.');
+  if (supportsMutation) {
+    // We only have the top Fiber that was created but we need recurse down its
+    // children to find all the terminal nodes.
+    let node = workInProgress.child;
+    while (node !== null) {
+      if (node.tag === HostComponent || node.tag === HostText) {
+        appendInitialChild(parent, node.stateNode);
+      } else if (
+        node.tag === HostPortal ||
+        (supportsSingletons ? node.tag === HostSingleton : false)
+      ) {
+        // If we have a portal child, then we don't want to traverse
+        // down its children. Instead, we'll get insertions from each child in
+        // the portal directly.
+        // If we have a HostSingleton it will be placed independently
+      } else if (node.child !== null) {
+        node.child.return = node;
+        node = node.child;
+        continue;
+      }
+      if (node === workInProgress) {
+        return;
+      }
+      // $FlowFixMe[incompatible-use] found when upgrading Flow
+      while (node.sibling === null) {
+        // $FlowFixMe[incompatible-use] found when upgrading Flow
+        if (node.return === null || node.return === workInProgress) {
+          return;
+        }
+        node = node.return;
+      }
+      // $FlowFixMe[incompatible-use] found when upgrading Flow
+      node.sibling.return = node.return;
+      node = node.sibling;
+    }
+  } else if (supportsPersistence) {
+    throw new Error('Not implemented yet.');
+  }
 }
 
 function completeWork(
@@ -312,6 +349,7 @@ function completeWork(
           // (eg DOM renderer supports auto-focus for certain elements).
           // Make sure such renderers get scheduled for later work.
           if (
+            // 在这个函数内将属性真正设置到 DOM 元素上
             finalizeInitialChildren(
               instance,
               type,
