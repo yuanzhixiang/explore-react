@@ -121,8 +121,8 @@ import {
   // finalizeContainerChildren,
   // preparePortalMount,
   // prepareScopeUpdate,
-  // maySuspendCommit,
-  // maySuspendCommitOnUpdate,
+  maySuspendCommit,
+  maySuspendCommitOnUpdate,
   // maySuspendCommitInSyncRender,
   // mayResourceSuspendCommit,
   // preloadInstance,
@@ -360,9 +360,26 @@ function completeWork(
             markUpdate(workInProgress);
           }
         }
-        throw new Error('Not implemented yet.');
       }
-      throw new Error('Not implemented yet.');
+      bubbleProperties(workInProgress);
+      if (enableViewTransition) {
+        // Host Components act as their own View Transitions which doesn't run enter/exit animations.
+        // We clear any ViewTransitionStatic flag bubbled from inner View Transitions.
+        workInProgress.subtreeFlags &= ~ViewTransitionStatic;
+      }
+
+      // This must come at the very end of the complete phase, because it might
+      // throw to suspend, and if the resource immediately loads, the work loop
+      // will resume rendering as if the work-in-progress completed. So it must
+      // fully complete.
+      preloadInstanceAndSuspendIfNeeded(
+        workInProgress,
+        workInProgress.type,
+        current === null ? null : current.memoizedProps,
+        workInProgress.pendingProps,
+        renderLanes,
+      );
+      return null;
     }
     case HostText: {
       throw new Error('Not implemented yet.');
@@ -408,6 +425,118 @@ function completeWork(
     `Unknown unit of work tag (${workInProgress.tag}). This error is likely caused by a bug in ` +
       'React. Please file an issue.',
   );
+}
+
+function bubbleProperties(completedWork: Fiber) {
+  // Bailout 在 react 中是一个性能优化术语，当 React 发现某个组件不需要更新时，会跳过它及其子树的渲染过程，直接复用之前的结果。
+  const didBailout =
+    // 有旧的 fiber（不是首次渲染）
+    completedWork.alternate !== null &&
+    // 子节点指针没变（子节点被复用了）
+    completedWork.alternate.child === completedWork.child;
+
+  let newChildLanes: Lanes = NoLanes;
+  let subtreeFlags: Flags = NoFlags;
+
+  if (!didBailout) {
+    // Bubble up the earliest expiration time.
+    // 这是一个双重检查，用来判断是否需要收集性能分析（profiling）数据
+    if (enableProfilerTimer && (completedWork.mode & ProfileMode) !== NoMode) {
+      throw new Error('Not implemented yet.');
+    } else {
+      // 让父节点知道整个子树中有哪些优先级的更新需要处理
+      // 获取当前 fiber 的第一个子节点
+      let child = completedWork.child;
+      // 遍历所有子节点
+      while (child !== null) {
+        // 再合并到 newChildLanes（累加所有子节点的优先级）
+        newChildLanes = mergeLanes(
+          newChildLanes,
+          // 先合并子节点的两个 lanes
+          mergeLanes(
+            // 这个 fiber 自己的更新优先级
+            child.lanes,
+            // 这个 fiber 子树的更新优先级
+            child.childLanes,
+          ),
+        );
+
+        // "Static" flags share the lifetime of the fiber/hook they belong to,
+        // so we should bubble those up even during a bailout. All the other
+        // flags have a lifetime only of a single render + commit, so we should
+        // ignore them.
+        // 这里只收集静态 flags（用 & StaticMask 过滤）
+        subtreeFlags |= child.subtreeFlags & StaticMask;
+        subtreeFlags |= child.flags & StaticMask;
+
+        // 这是一个代码坏味道（code smell），因为它假设 commit 阶段永远不会和 render 阶段并发
+        // Update the return pointer so the tree is consistent. This is a code
+        // smell because it assumes the commit phase is never concurrent with
+        // the render phase. Will address during refactor to alternate model.
+        // 设置子节点的 return 指针指向父节点
+        child.return = completedWork;
+
+        // 遍历下一个兄弟节点，继续循环
+        child = child.sibling;
+      }
+    }
+
+    completedWork.subtreeFlags |= subtreeFlags;
+  } else {
+    throw new Error('Not implemented yet.');
+  }
+
+  completedWork.childLanes = newChildLanes;
+
+  return didBailout;
+}
+
+// This function must be called at the very end of the complete phase, because
+// it might throw to suspend, and if the resource immediately loads, the work
+// loop will resume rendering as if the work-in-progress completed. So it must
+// fully complete.
+// TODO: This should ideally move to begin phase, but currently the instance is
+// not created until the complete phase. For our existing use cases, host nodes
+// that suspend don't have children, so it doesn't matter. But that might not
+// always be true in the future.
+// 这个函数用于在 complete 阶段预加载资源
+function preloadInstanceAndSuspendIfNeeded(
+  workInProgress: Fiber,
+  type: Type,
+  oldProps: null | Props,
+  newProps: Props,
+  renderLanes: Lanes,
+) {
+  const maySuspend =
+    // 全局开启了功能 或者 当前 fiber 的 mode 包含 SuspenseyImagesMode
+    // 这是一个全局 feature flag（编译时常量）
+    (enableSuspenseyImages ||
+      // 这是位运算，检查当前 fiber 是否开启了 Suspensey Images 模式
+      (workInProgress.mode & SuspenseyImagesMode) !== NoMode) &&
+    // 检查是否是 Suspensey 资源
+    (oldProps === null // oldProps === null 表示首次渲染
+      ? maySuspendCommit(type, newProps)
+      : maySuspendCommitOnUpdate(type, oldProps, newProps));
+
+  if (!maySuspend) {
+    // If this flag was set previously, we can remove it. The flag
+    // represents whether this particular set of props might ever need to
+    // suspend. The safest thing to do is for maySuspendCommit to always
+    // return true, but if the renderer is reasonably confident that the
+    // underlying resource won't be evicted, it can return false as a
+    // performance optimization.
+    workInProgress.flags &= ~MaySuspendCommit;
+    return;
+  }
+
+  // Mark this fiber with a flag. This gets set on all host instances
+  // that might possibly suspend, even if they don't need to suspend
+  // currently. We use this when revealing a prerendered tree, because
+  // even though the tree has "mounted", its resources might not have
+  // loaded yet.
+  workInProgress.flags |= MaySuspendCommit;
+
+  throw new Error('Not implemented yet.');
 }
 
 export {completeWork};

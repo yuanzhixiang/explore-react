@@ -159,12 +159,16 @@ const performWorkUntilDeadline = () => {
     let hasMoreWork = true;
     try {
       hasMoreWork = flushWork(currentTime);
+    } catch (error) {
+      console.log('Error occurred during performWorkUntilDeadline: ', error);
+      throw error;
     } finally {
       if (hasMoreWork) {
         // If there's more work, schedule the next message event at the end
         // of the preceding one.
         // 如果还有任务要执行，就继续调度下一次执行
-        schedulePerformWorkUntilDeadline();
+        // @why 我们暂时先注释这里，不然现在内部出现异常会导致死循环
+        // schedulePerformWorkUntilDeadline();
       } else {
         isMessageLoopRunning = false;
       }

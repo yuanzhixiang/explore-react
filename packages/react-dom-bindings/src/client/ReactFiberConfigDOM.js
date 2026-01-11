@@ -840,3 +840,30 @@ export function appendInitialChild(
   // Note: This should not use moveBefore() because initial are appended while disconnected.
   parentInstance.appendChild(child);
 }
+
+export function maySuspendCommit(type: Type, props: Props): boolean {
+  if (!enableSuspenseyImages && !enableViewTransition) {
+    return false;
+  }
+  // Suspensey images are the default, unless you opt-out of with either
+  // loading="lazy" or onLoad={...} which implies you're ok waiting.
+  return (
+    type === 'img' && // 是 <img> 标签
+    props.src != null && // 有 src
+    props.src !== '' && // src 不为空
+    props.onLoad == null && // 没有 onLoad 回调
+    props.loading !== 'lazy' // 不是懒加载
+  );
+}
+
+export function maySuspendCommitOnUpdate(
+  type: Type,
+  oldProps: Props,
+  newProps: Props,
+): boolean {
+  return (
+    maySuspendCommit(type, newProps) && // 新 props 是 Suspensey 图片
+    (newProps.src !== oldProps.src || // src 改变了
+      newProps.srcSet !== oldProps.srcSet) // 或 srcSet 改变了
+  );
+}
