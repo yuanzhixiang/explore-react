@@ -1116,6 +1116,7 @@ function renderRootSync(
 }
 
 function handleThrow(root: FiberRoot, thrownValue: any): void {
+  console.log('handleThrow', thrownValue);
   throw new Error('Not implemented yet.');
 }
 
@@ -1192,7 +1193,28 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     } else {
       next = completeWork(current, completedWork, entangledRenderLanes);
     }
-    throw new Error('Not implemented yet.');
+    if (enableProfilerTimer && (completedWork.mode & ProfileMode) !== NoMode) {
+      // Update render duration assuming we didn't error.
+      // stopProfilerTimerIfRunningAndRecordIncompleteDuration(completedWork);
+      throw new Error('Not implemented yet.');
+    }
+    if (next !== null) {
+      // Completing this fiber spawned new work. Work on that next.
+      workInProgress = next;
+      return;
+    }
+
+    const siblingFiber = completedWork.sibling;
+    if (siblingFiber !== null) {
+      // If there is more work to do in this returnFiber, do that next.
+      workInProgress = siblingFiber;
+      return;
+    }
+    // Otherwise, return to the parent
+    // $FlowFixMe[incompatible-type] we bail out when we get a null
+    completedWork = returnFiber;
+    // Update the next thing we're working on in case something throws.
+    workInProgress = completedWork;
   } while (completedWork !== null);
 
   // We've reached the root.
