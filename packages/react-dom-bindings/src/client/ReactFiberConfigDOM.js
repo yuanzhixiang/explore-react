@@ -39,8 +39,8 @@ import hasOwnProperty from 'shared/hasOwnProperty';
 import {REACT_CONTEXT_TYPE} from 'shared/ReactSymbols';
 
 export {
-  // setCurrentUpdatePriority,
-  // getCurrentUpdatePriority,
+  setCurrentUpdatePriority,
+  getCurrentUpdatePriority,
   resolveUpdatePriority,
 } from './ReactDOMUpdatePriority';
 import {
@@ -87,17 +87,17 @@ import {
 // import {hydrateInput} from './ReactDOMInput';
 // import {hydrateTextarea} from './ReactDOMTextarea';
 // import {hydrateSelect} from './ReactDOMSelect';
-// import {getSelectionInformation, restoreSelection} from './ReactInputSelection';
+import {getSelectionInformation, restoreSelection} from './ReactInputSelection';
 // import setTextContent from './setTextContent';
 import {
   validateDOMNesting,
   // validateTextNesting,
   updatedAncestorInfoDev,
 } from './validateDOMNesting';
-// import {
-//   isEnabled as ReactBrowserEventEmitterIsEnabled,
-//   setEnabled as ReactBrowserEventEmitterSetEnabled,
-// } from '../events/ReactDOMEventListener';
+import {
+  isEnabled as ReactBrowserEventEmitterIsEnabled,
+  setEnabled as ReactBrowserEventEmitterSetEnabled,
+} from '../events/ReactDOMEventListener';
 import {SVG_NAMESPACE, MATH_NAMESPACE} from './DOMNamespaces';
 import {
   ELEMENT_NODE,
@@ -216,6 +216,19 @@ export type Container =
   | interface extends DocumentFragment {_reactRootContainer?: FiberRoot};
 export type Instance = Element;
 export type TextInstance = Text;
+
+export type HoistableRoot = Document | ShadowRoot;
+
+export opaque type SuspendedState = {
+  stylesheets: null | Map<StylesheetResource, HoistableRoot>,
+  count: number, // suspensey css and active view transitions
+  imgCount: number, // suspensey images pending to load
+  imgBytes: number, // number of bytes we estimate needing to download
+  suspenseyImages: Array<HTMLImageElement>, // instances of suspensey images (whether loaded or not)
+  waitingForImages: boolean, // false when we're no longer blocking on images
+  waitingForViewTransition: boolean,
+  unsuspend: null | (() => void),
+};
 
 type InstanceWithFragmentHandles = Instance & {
   unstable_reactFragments?: Set<FragmentInstanceType>,
@@ -866,4 +879,41 @@ export function maySuspendCommitOnUpdate(
     (newProps.src !== oldProps.src || // src 改变了
       newProps.srcSet !== oldProps.srcSet) // 或 srcSet 改变了
   );
+}
+
+export function prepareForCommit(containerInfo: Container): Object | null {
+  eventsEnabled = ReactBrowserEventEmitterIsEnabled();
+  selectionInformation = getSelectionInformation(containerInfo);
+  let activeInstance = null;
+  if (enableCreateEventHandleAPI) {
+    const focusedElem = selectionInformation.focusedElem;
+    if (focusedElem !== null) {
+      // activeInstance = getClosestInstanceFromNode(focusedElem);
+      throw new Error('Not implemented yet.');
+    }
+  }
+  ReactBrowserEventEmitterSetEnabled(false);
+  return activeInstance;
+}
+
+export function clearContainer(container: Container): void {
+  const nodeType = container.nodeType;
+  if (nodeType === DOCUMENT_NODE) {
+    clearContainerSparingly(container);
+  } else if (nodeType === ELEMENT_NODE) {
+    switch (container.nodeName) {
+      case 'HEAD':
+      case 'HTML':
+      case 'BODY':
+        clearContainerSparingly(container);
+        return;
+      default: {
+        container.textContent = '';
+      }
+    }
+  }
+}
+
+function clearContainerSparingly(container: Node) {
+  throw new Error('Not implemented yet.');
 }

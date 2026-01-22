@@ -135,6 +135,10 @@ export function enqueueConcurrentClassUpdate<State>(
   return getRootForUpdatedFiber(fiber);
 }
 
+export function getConcurrentlyUpdatedLanes(): Lanes {
+  return concurrentlyUpdatedLanes;
+}
+
 function enqueueUpdate(
   fiber: Fiber,
   queue: ConcurrentQueue | null,

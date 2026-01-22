@@ -35,3 +35,18 @@ export function resolveUpdatePriority(): EventPriority {
   // 否则根据事件类型（比如 click、input）计算并返回对应优先级。
   return getEventPriority(currentEvent.type);
 }
+
+export function setCurrentUpdatePriority(
+  newPriority: EventPriority,
+  // Closure will consistently not inline this function when it has arity 1
+  // however when it has arity 2 even if the second arg is omitted at every
+  // callsite it seems to inline it even when the internal length of the function
+  // is much longer. I hope this is consistent enough to rely on across builds
+  IntentionallyUnusedArgument?: empty,
+): void {
+  ReactDOMSharedInternals.p /* currentUpdatePriority */ = newPriority;
+}
+
+export function getCurrentUpdatePriority(): EventPriority {
+  return ReactDOMSharedInternals.p; /* currentUpdatePriority */
+}

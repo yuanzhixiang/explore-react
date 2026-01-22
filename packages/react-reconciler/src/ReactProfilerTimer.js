@@ -171,3 +171,11 @@ export function startProfilerTimer(fiber: Fiber): void {
     fiber.actualStartTime = profilerStartTime;
   }
 }
+
+export function resetComponentEffectTimers(): void {
+  if (!enableProfilerTimer || !enableProfilerCommitHooks) {
+    return;
+  }
+  componentEffectStartTime = -1.1;
+  componentEffectEndTime = -1.1;
+}

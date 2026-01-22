@@ -431,6 +431,10 @@ export function markStarvedLanesAsExpired(
   }
 }
 
+export function includesOnlyViewTransitionEligibleLanes(lanes: Lanes): boolean {
+  return (lanes & (TransitionLanes | RetryLanes | IdleLane)) === lanes;
+}
+
 export function includesOnlyRetries(lanes: Lanes): boolean {
   return (lanes & RetryLanes) === lanes;
 }
@@ -445,6 +449,14 @@ export function isTransitionLane(lane: Lane): boolean {
   // 它们是 低优先级、可中断 的更新，用于不阻塞用户交互的渲染
   // isTransitionLane 就是用 lane & TransitionLanes 来判断某个 lane 是否属于这组
   return (lane & TransitionLanes) !== NoLanes;
+}
+
+export function isGestureRender(lanes: Lanes): boolean {
+  if (!enableGestureTransition) {
+    return false;
+  }
+  // This should render only the one lane.
+  return lanes === GestureLane;
 }
 
 export function intersectLanes(a: Lanes | Lane, b: Lanes | Lane): Lanes {
@@ -606,14 +618,6 @@ export function checkIfRootIsPrerendering(
   return (unblockedLanes & renderLanes) === 0;
 }
 
-export function isGestureRender(lanes: Lanes): boolean {
-  if (!enableGestureTransition) {
-    return false;
-  }
-  // This should render only the one lane.
-  return lanes === GestureLane;
-}
-
 // 这个函数用于判断 lanes 中是否包含阻塞性的 lane
 export function includesBlockingLane(lanes: Lanes): boolean {
   const SyncDefaultLanes =
@@ -726,4 +730,108 @@ export function getEntangledLanes(root: FiberRoot, renderLanes: Lanes): Lanes {
   }
 
   return entangledLanes;
+}
+
+// TODO 这个代码是干嘛的？怎么里面一堆位运算
+export function markRootFinished(
+  root: FiberRoot,
+  finishedLanes: Lanes,
+  remainingLanes: Lanes,
+  spawnedLane: Lane,
+  updatedLanes: Lanes,
+  suspendedRetryLanes: Lanes,
+) {
+  const previouslyPendingLanes = root.pendingLanes;
+  const noLongerPendingLanes = previouslyPendingLanes & ~remainingLanes;
+
+  root.pendingLanes = remainingLanes;
+
+  // Let's try everything again
+  root.suspendedLanes = NoLanes;
+  root.pingedLanes = NoLanes;
+  root.warmLanes = NoLanes;
+
+  if (enableDefaultTransitionIndicator) {
+    root.indicatorLanes &= remainingLanes;
+  }
+
+  root.expiredLanes &= remainingLanes;
+
+  root.entangledLanes &= remainingLanes;
+
+  root.errorRecoveryDisabledLanes &= remainingLanes;
+  root.shellSuspendCounter = 0;
+
+  const entanglements = root.entanglements;
+  const expirationTimes = root.expirationTimes;
+  const hiddenUpdates = root.hiddenUpdates;
+
+  // Clear the lanes that no longer have pending work
+  let lanes = noLongerPendingLanes;
+  while (lanes > 0) {
+    const index = pickArbitraryLaneIndex(lanes);
+    const lane = 1 << index;
+
+    entanglements[index] = NoLanes;
+    expirationTimes[index] = NoTimestamp;
+
+    const hiddenUpdatesForLane = hiddenUpdates[index];
+    if (hiddenUpdatesForLane !== null) {
+      hiddenUpdates[index] = null;
+      // "Hidden" updates are updates that were made to a hidden component. They
+      // have special logic associated with them because they may be entangled
+      // with updates that occur outside that tree. But once the outer tree
+      // commits, they behave like regular updates.
+      for (let i = 0; i < hiddenUpdatesForLane.length; i++) {
+        const update = hiddenUpdatesForLane[i];
+        if (update !== null) {
+          update.lane &= ~OffscreenLane;
+        }
+      }
+    }
+
+    lanes &= ~lane;
+  }
+
+  if (spawnedLane !== NoLane) {
+    // markSpawnedDeferredLane(
+    //   root,
+    //   spawnedLane,
+    //   // This render finished successfully without suspending, so we don't need
+    //   // to entangle the spawned task with the parent task.
+    //   NoLanes,
+    // );
+    throw new Error('Not implemented yet.');
+  }
+
+  // suspendedRetryLanes represents the retry lanes spawned by new Suspense
+  // boundaries during this render that were not later pinged.
+  //
+  // These lanes were marked as pending on their associated Suspense boundary
+  // fiber during the render phase so that we could start rendering them
+  // before new data streams in. As soon as the fallback commits, we can try
+  // to render them again.
+  //
+  // But since we know they're still suspended, we can skip straight to the
+  // "prerender" mode (i.e. don't skip over siblings after something
+  // suspended) instead of the regular mode (i.e. unwind and skip the siblings
+  // as soon as something suspends to unblock the rest of the update).
+  if (
+    suspendedRetryLanes !== NoLanes &&
+    // Note that we only do this if there were no updates since we started
+    // rendering. This mirrors the logic in markRootUpdated — whenever we
+    // receive an update, we reset all the suspended and pinged lanes.
+    updatedLanes === NoLanes &&
+    !(disableLegacyMode && root.tag === LegacyRoot)
+  ) {
+    // We also need to avoid marking a retry lane as suspended if it was already
+    // pending before this render. We can't say these are now suspended if they
+    // weren't included in our attempt.
+    const freshlySpawnedRetryLanes =
+      suspendedRetryLanes &
+      // Remove any retry lane that was already pending before our just-finished
+      // attempt, and also wasn't included in that attempt.
+      ~(previouslyPendingLanes & ~finishedLanes);
+    root.suspendedLanes |= freshlySpawnedRetryLanes;
+  }
 }
