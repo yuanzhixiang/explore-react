@@ -70,7 +70,7 @@ import {OffscreenLane} from './ReactFiberLane';
 //   getSuspendedTreeContext,
 //   restoreSuspendedTreeContext,
 // } from './ReactFiberTreeContext';
-// import {queueRecoverableErrors} from './ReactFiberWorkLoop';
+import {queueRecoverableErrors} from './ReactFiberWorkLoop';
 // import {getRootHostContainer, getHostContext} from './ReactFiberHostContext';
 // import {describeDiff} from './ReactFiberHydrationDiffs';
 import {runWithFiberInDEV} from './ReactCurrentFiber';
@@ -162,6 +162,20 @@ function popToNextHostParent(fiber: Fiber): void {
         hydrationParentFiber = hydrationParentFiber.return;
     }
   }
+}
+
+export function upgradeHydrationErrorsToRecoverable(): Array<
+  CapturedValue<mixed>,
+> | null {
+  const queuedErrors = hydrationErrors;
+  if (queuedErrors !== null) {
+    // Successfully completed a forced client render. The errors that occurred
+    // during the hydration attempt are now recovered. We will log them in
+    // commit phase, once the entire tree has finished.
+    queueRecoverableErrors(queuedErrors);
+    hydrationErrors = null;
+  }
+  return queuedErrors;
 }
 
 export {

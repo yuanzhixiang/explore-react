@@ -431,6 +431,10 @@ export function markStarvedLanesAsExpired(
   }
 }
 
+export function includesOnlyRetries(lanes: Lanes): boolean {
+  return (lanes & RetryLanes) === lanes;
+}
+
 export function includesNonIdleWork(lanes: Lanes): boolean {
   return (lanes & NonIdleLanes) !== NoLanes;
 }

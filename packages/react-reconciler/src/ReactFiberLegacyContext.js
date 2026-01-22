@@ -66,13 +66,22 @@ function pushTopLevelContextObject(
   }
 }
 
+function popTopLevelContextObject(fiber: Fiber): void {
+  if (disableLegacyContext) {
+    return;
+  } else {
+    pop(didPerformWorkStackCursor, fiber);
+    pop(contextStackCursor, fiber);
+  }
+}
+
 export {
   // getUnmaskedContext,
   // cacheContext,
   // getMaskedContext,
   hasContextChanged,
   // popContext,
-  // popTopLevelContextObject,
+  popTopLevelContextObject,
   pushTopLevelContextObject,
   // processChildContext,
   // isContextProvider,

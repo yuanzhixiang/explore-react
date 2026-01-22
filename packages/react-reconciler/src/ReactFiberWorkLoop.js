@@ -179,7 +179,7 @@ import {
   // removeLanes,
   pickArbitraryLane,
   // includesNonIdleWork,
-  // includesOnlyRetries,
+  includesOnlyRetries,
   // includesOnlyTransitions,
   includesBlockingLane,
   // includesTransitionLane,
@@ -258,7 +258,7 @@ import {completeWork} from './ReactFiberCompleteWork';
 //   startGestureAnimations,
 // } from './ReactFiberApplyGesture';
 // import {enqueueUpdate} from './ReactFiberClassUpdateQueue';
-// import {resetContextDependencies} from './ReactFiberNewContext';
+import {resetContextDependencies} from './ReactFiberNewContext';
 import {
   // resetHooksAfterThrow,
   // resetHooksOnUnwind,
@@ -317,7 +317,7 @@ import {
   //   clampRetryTimers,
   //   clampIdleTimers,
   //   markNestedUpdateScheduled,
-  //   renderStartTime,
+  renderStartTime,
   //   commitStartTime,
   //   commitEndTime,
   //   commitErrors,
@@ -1052,7 +1052,54 @@ export function performWorkOnRoot(
 
   let renderWasConcurrent = shouldTimeSlice;
 
-  throw new Error('Not implemented yet.');
+  do {
+    if (exitStatus === RootInProgress) {
+      throw new Error('Not implemented yet.');
+    } else {
+      let renderEndTime = 0;
+      if (enableProfilerTimer && enableComponentPerformanceTrack) {
+        renderEndTime = now();
+      }
+      // The render completed.
+
+      // Check if this render may have yielded to a concurrent event, and if so,
+      // confirm that any newly rendered stores are consistent.
+      // TODO: It's possible that even a concurrent render may never have yielded
+      // to the main thread, if it was fast enough, or if it expired. We could
+      // skip the consistency check in that case, too.
+      const finishedWork: Fiber = (root.current.alternate: any);
+      if (
+        renderWasConcurrent &&
+        !isRenderConsistentWithExternalStores(finishedWork)
+      ) {
+        throw new Error('Not implemented yet.');
+      }
+
+      // Check if something threw
+      if (
+        (disableLegacyMode || root.tag !== LegacyRoot) &&
+        exitStatus === RootErrored
+      ) {
+        throw new Error('Not implemented yet.');
+      }
+
+      if (exitStatus === RootFatalErrored) {
+        throw new Error('Not implemented yet.');
+      }
+
+      // We now have a consistent tree. The next step is either to commit it,
+      // or, if something suspended, wait to commit it after a timeout.
+      finishConcurrentRender(
+        root,
+        exitStatus,
+        finishedWork,
+        lanes,
+        renderEndTime,
+      );
+    }
+    break;
+  } while (true);
+  ensureRootIsScheduled(root);
 }
 
 function renderRootConcurrent(root: FiberRoot, lanes: Lanes): RootExitStatus {
@@ -1112,12 +1159,144 @@ function renderRootSync(
       handleThrow(root, thrownValue);
     }
   } while (true);
+
+  // Check if something suspended in the shell. We use this to detect an
+  // infinite ping loop caused by an uncached promise.
+  //
+  // Only increment this counter once per synchronous render attempt across the
+  // whole tree. Even if there are many sibling components that suspend, this
+  // counter only gets incremented once.
+  if (didSuspendInShell) {
+    root.shellSuspendCounter++;
+  }
+
+  resetContextDependencies();
+
+  executionContext = prevExecutionContext;
+  popDispatcher(prevDispatcher);
+  popAsyncDispatcher(prevAsyncDispatcher);
+
+  if (enableSchedulingProfiler) {
+    // markRenderStopped();
+    throw new Error('Not implemented yet.');
+  }
+
+  if (workInProgress !== null) {
+    // Did not complete the tree. This can happen if something suspended in
+    // the shell.
+  } else {
+    // Normal case. We completed the whole tree.
+
+    // Set this to null to indicate there's no in-progress render.
+    workInProgressRoot = null;
+    workInProgressRootRenderLanes = NoLanes;
+
+    // It's safe to process the queue now that the render phase is complete.
+    finishQueueingConcurrentUpdates();
+  }
+
+  return exitStatus;
+}
+
+function finishConcurrentRender(
+  root: FiberRoot,
+  exitStatus: RootExitStatus,
+  finishedWork: Fiber,
+  lanes: Lanes,
+  renderEndTime: number, // Profiling-only
+) {
+  // TODO: The fact that most of these branches are identical suggests that some
+  // of the exit statuses are not best modeled as exit statuses and should be
+  // tracked orthogonally.
+  switch (exitStatus) {
+    case RootInProgress:
+    case RootFatalErrored: {
+      throw new Error('Root did not complete. This is a bug in React.');
+    }
+    case RootSuspendedWithDelay: {
+      throw new Error('Not implemented yet.');
+    }
+    // Fallthrough
+    case RootSuspendedAtTheShell: {
+      throw new Error('Not implemented yet.');
+    }
+    case RootErrored: {
+      // This render errored. Ignore any recoverable errors because we weren't actually
+      // able to recover. Instead, whatever the final errors were is the ones we log.
+      // This ensures that we only log the actual client side error if it's just a plain
+      // error thrown from a component on the server and the client.
+      workInProgressRootRecoverableErrors = null;
+      break;
+    }
+    case RootSuspended:
+    case RootCompleted: {
+      break;
+    }
+    default: {
+      throw new Error('Unknown root exit status.');
+    }
+  }
+
+  if (shouldForceFlushFallbacksInDEV()) {
+    throw new Error('Not implemented yet.');
+  } else {
+    if (
+      includesOnlyRetries(lanes) &&
+      (alwaysThrottleRetries || exitStatus === RootSuspended)
+    ) {
+      throw new Error('Not implemented yet.');
+    }
+    commitRootWhenReady(
+      root,
+      finishedWork,
+      workInProgressRootRecoverableErrors,
+      workInProgressTransitions,
+      workInProgressRootDidIncludeRecursiveRenderUpdate,
+      lanes,
+      workInProgressDeferredLane,
+      workInProgressRootInterleavedUpdatedLanes,
+      workInProgressSuspendedRetryLanes,
+      workInProgressRootDidSkipSuspendedSiblings,
+      exitStatus,
+      null,
+      renderStartTime,
+      renderEndTime,
+    );
+  }
+  throw new Error('Not implemented yet.');
+}
+
+function commitRootWhenReady(
+  root: FiberRoot,
+  finishedWork: Fiber,
+  recoverableErrors: Array<CapturedValue<mixed>> | null,
+  transitions: Array<Transition> | null,
+  didIncludeRenderPhaseUpdate: boolean,
+  lanes: Lanes,
+  spawnedLane: Lane,
+  updatedLanes: Lanes,
+  suspendedRetryLanes: Lanes,
+  didSkipSuspendedSiblings: boolean,
+  exitStatus: RootExitStatus,
+  suspendedCommitReason: SuspendedCommitReason, // Profiling-only
+  completedRenderStartTime: number, // Profiling-only
+  completedRenderEndTime: number, // Profiling-only
+) {
+  throw new Error('Not implemented yet.');
+}
+
+function isRenderConsistentWithExternalStores(finishedWork: Fiber): boolean {
   throw new Error('Not implemented yet.');
 }
 
 function handleThrow(root: FiberRoot, thrownValue: any): void {
   console.log('handleThrow', thrownValue);
   throw new Error('Not implemented yet.');
+}
+
+function shouldForceFlushFallbacksInDEV() {
+  // Never force flush in production. This function should get stripped out.
+  return __DEV__ && ReactSharedInternals.actQueue !== null;
 }
 
 // The work loop is an extremely hot path. Tell Closure not to inline it.
@@ -1246,10 +1425,18 @@ function pushDispatcher(container: any) {
   }
 }
 
+function popDispatcher(prevDispatcher: any) {
+  ReactSharedInternals.H = prevDispatcher;
+}
+
 function pushAsyncDispatcher() {
   const prevAsyncDispatcher = ReactSharedInternals.A;
   ReactSharedInternals.A = DefaultAsyncDispatcher;
   return prevAsyncDispatcher;
+}
+
+function popAsyncDispatcher(prevAsyncDispatcher: any) {
+  ReactSharedInternals.A = prevAsyncDispatcher;
 }
 
 export function markSkippedUpdateLanes(lane: Lane | Lanes): void {
@@ -1257,4 +1444,16 @@ export function markSkippedUpdateLanes(lane: Lane | Lanes): void {
     lane,
     workInProgressRootSkippedLanes,
   );
+}
+
+export function queueRecoverableErrors(errors: Array<CapturedValue<mixed>>) {
+  if (workInProgressRootRecoverableErrors === null) {
+    workInProgressRootRecoverableErrors = errors;
+  } else {
+    // $FlowFixMe[method-unbinding]
+    workInProgressRootRecoverableErrors.push.apply(
+      workInProgressRootRecoverableErrors,
+      errors,
+    );
+  }
 }

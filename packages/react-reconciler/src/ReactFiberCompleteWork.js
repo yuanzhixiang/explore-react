@@ -132,7 +132,7 @@ import {
   getRootHostContainer,
   popHostContext,
   getHostContext,
-  // popHostContainer,
+  popHostContainer,
 } from './ReactFiberHostContext';
 // import {
 //   suspenseStackCursor,
@@ -146,11 +146,11 @@ import {
 // } from './ReactFiberSuspenseContext';
 // import {popHiddenContext} from './ReactFiberHiddenContext';
 // import {findFirstSuspended} from './ReactFiberSuspenseComponent';
-// import {
-//   isContextProvider as isLegacyContextProvider,
-//   popContext as popLegacyContext,
-//   popTopLevelContextObject as popTopLevelLegacyContextObject,
-// } from './ReactFiberLegacyContext';
+import {
+  // isContextProvider as isLegacyContextProvider,
+  // popContext as popLegacyContext,
+  popTopLevelContextObject as popTopLevelLegacyContextObject,
+} from './ReactFiberLegacyContext';
 import {popProvider} from './ReactFiberNewContext';
 import {
   // prepareToHydrateHostInstance,
@@ -160,16 +160,16 @@ import {
   popHydrationState,
   resetHydrationState,
   getIsHydrating,
-  // upgradeHydrationErrorsToRecoverable,
+  upgradeHydrationErrorsToRecoverable,
   // emitPendingHydrationWarnings,
 } from './ReactFiberHydrationContext';
-// import {
-//   renderHasNotSuspendedYet,
-//   getRenderTargetTime,
-//   getWorkInProgressTransitions,
-//   shouldRemainOnPreviousScreen,
-//   markSpawnedRetryLane,
-// } from './ReactFiberWorkLoop';
+import {
+  //   renderHasNotSuspendedYet,
+  //   getRenderTargetTime,
+  getWorkInProgressTransitions,
+  //   shouldRemainOnPreviousScreen,
+  //   markSpawnedRetryLane,
+} from './ReactFiberWorkLoop';
 import {
   OffscreenLane,
   SomeRetryLane,
@@ -184,7 +184,7 @@ import {
 // import {transferActualDuration} from './ReactProfilerTimer';
 import {popCacheProvider} from './ReactFiberCacheComponent';
 import {popTreeContext, pushTreeFork} from './ReactFiberTreeContext';
-// import {popRootTransition, popTransition} from './ReactFiberTransition';
+import {popRootTransition, popTransition} from './ReactFiberTransition';
 // import {
 //   popMarkerInstance,
 //   popRootMarkerInstance,
@@ -285,7 +285,83 @@ function completeWork(
       throw new Error('Not implemented yet.');
     }
     case HostRoot: {
-      throw new Error('Not implemented yet.');
+      const fiberRoot = (workInProgress.stateNode: FiberRoot);
+
+      if (enableTransitionTracing) {
+        const transitions = getWorkInProgressTransitions();
+        // We set the Passive flag here because if there are new transitions,
+        // we will need to schedule callbacks and process the transitions,
+        // which we do in the passive phase
+        if (transitions !== null) {
+          workInProgress.flags |= Passive;
+        }
+      }
+      let previousCache: Cache | null = null;
+      if (current !== null) {
+        previousCache = current.memoizedState.cache;
+      }
+      const cache: Cache = workInProgress.memoizedState.cache;
+      if (cache !== previousCache) {
+        // Run passive effects to retain/release the cache.
+        workInProgress.flags |= Passive;
+      }
+
+      popCacheProvider(workInProgress, cache);
+
+      if (enableTransitionTracing) {
+        // popRootMarkerInstance(workInProgress);
+        throw new Error('Not implemented yet.');
+      }
+
+      popRootTransition(workInProgress, fiberRoot, renderLanes);
+      popHostContainer(workInProgress);
+      popTopLevelLegacyContextObject(workInProgress);
+      if (fiberRoot.pendingContext) {
+        fiberRoot.context = fiberRoot.pendingContext;
+        fiberRoot.pendingContext = null;
+      }
+      if (current === null || current.child === null) {
+        // If we hydrated, pop so that we can delete any remaining children
+        // that weren't hydrated.
+        const wasHydrated = popHydrationState(workInProgress);
+        if (wasHydrated) {
+          throw new Error('Not implemented yet.');
+        } else {
+          if (current !== null) {
+            const prevState: RootState = current.memoizedState;
+            if (
+              // Check if this is a client root
+              !prevState.isDehydrated ||
+              // Check if we reverted to client rendering (e.g. due to an error)
+              (workInProgress.flags & ForceClientRender) !== NoFlags
+            ) {
+              // Schedule an effect to clear this container at the start of the
+              // next commit. This handles the case of React rendering into a
+              // container with previous children. It's also safe to do for
+              // updates too, because current.child would only be null if the
+              // previous render was null (so the container would already
+              // be empty).
+              workInProgress.flags |= Snapshot;
+
+              // If this was a forced client render, there may have been
+              // recoverable errors during first hydration attempt. If so, add
+              // them to a queue so we can log them in the commit phase.
+              upgradeHydrationErrorsToRecoverable();
+            }
+          }
+        }
+      }
+      updateHostContainer(current, workInProgress);
+      bubbleProperties(workInProgress);
+      if (enableTransitionTracing) {
+        if ((workInProgress.subtreeFlags & Visibility) !== NoFlags) {
+          // If any of our suspense children toggle visibility, this means that
+          // the pending boundaries array needs to be updated, which we only
+          // do in the passive phase.
+          workInProgress.flags |= Passive;
+        }
+      }
+      return null;
     }
     case HostHoistable: {
       throw new Error('Not implemented yet.');
@@ -489,6 +565,12 @@ function bubbleProperties(completedWork: Fiber) {
   completedWork.childLanes = newChildLanes;
 
   return didBailout;
+}
+
+function updateHostContainer(current: null | Fiber, workInProgress: Fiber) {
+  if (supportsPersistence) {
+    throw new Error('Not implement yet.');
+  }
 }
 
 // This function must be called at the very end of the complete phase, because

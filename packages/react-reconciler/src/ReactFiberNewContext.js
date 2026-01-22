@@ -155,3 +155,13 @@ export function popProvider(
 
   pop(valueCursor, providerFiber);
 }
+
+export function resetContextDependencies(): void {
+  // This is called right before React yields execution, to ensure `readContext`
+  // cannot be called outside the render phase.
+  currentlyRenderingFiber = null;
+  lastContextDependency = null;
+  if (__DEV__) {
+    isDisallowedContextReadInDEV = false;
+  }
+}
