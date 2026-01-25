@@ -64,7 +64,7 @@ import {
   // Aliased because `act` will override and push to an internal queue
   // scheduleCallback as Scheduler_scheduleCallback,
   // shouldYield,
-  // requestPaint,
+  requestPaint,
   now,
   NormalPriority as NormalSchedulerPriority,
   IdlePriority as IdleSchedulerPriority,
@@ -106,7 +106,7 @@ import {
   // getSuspendedCommitReason,
   // preloadInstance,
   // preloadResource,
-  // supportsHydration,
+  supportsHydration,
   setCurrentUpdatePriority,
   getCurrentUpdatePriority,
   resolveUpdatePriority,
@@ -115,7 +115,7 @@ import {
   // startGestureTransition,
   // stopViewTransition,
   // createViewTransitionInstance,
-  // flushHydrationEvents,
+  flushHydrationEvents,
 } from './ReactFiberConfig';
 
 import {
@@ -173,7 +173,7 @@ import {
   NoLane,
   SyncLane,
   // claimNextRetryLane,
-  // includesSyncLane,
+  includesSyncLane,
   // isSubsetOfLanes,
   mergeLanes,
   // removeLanes,
@@ -198,7 +198,7 @@ import {
   // movePendingFibersToMemoized,
   // addTransitionToLanesMap,
   getTransitionsForLanes,
-  // includesSomeLane,
+  includesSomeLane,
   OffscreenLane,
   SyncUpdateLanes,
   UpdateLanes,
@@ -215,7 +215,7 @@ import {
   DiscreteEventPriority,
   DefaultEventPriority,
   // lowerEventPriority,
-  // lanesToEventPriority,
+  lanesToEventPriority,
   eventPriorityToLane,
 } from './ReactEventPriorities';
 import {requestCurrentTransition} from './ReactFiberTransition';
@@ -366,12 +366,12 @@ import {
   markRenderStarted,
   // markRenderYielded,
   // markRenderStopped,
-  // onCommitRoot as onCommitRootDevTools,
+  onCommitRoot as onCommitRootDevTools,
   // onPostCommitRoot as onPostCommitRootDevTools,
   // setIsStrictModeForDevtools,
 } from './ReactFiberDevToolsHook';
-// import {onCommitRoot as onCommitRootTestSelector} from './ReactTestSelectors';
-// import {releaseCache} from './ReactFiberCacheComponent';
+import {onCommitRoot as onCommitRootTestSelector} from './ReactTestSelectors';
+import {releaseCache} from './ReactFiberCacheComponent';
 import {
   // isLegacyActEnvironment,
   isConcurrentActEnvironment,
@@ -392,7 +392,7 @@ import {
 // import {resetChildReconcilerOnUnwind} from './ReactChildFiber';
 import {
   ensureRootIsScheduled,
-  // flushSyncWorkOnAllRoots,
+  flushSyncWorkOnAllRoots,
   // flushSyncWorkOnLegacyRootsOnly,
   // requestTransitionLane,
 } from './ReactFiberRootScheduler';
@@ -1079,7 +1079,249 @@ function flushSpawnedWork(): void {
   ) {
     return;
   }
-  throw new Error('Not implemented yet.');
+
+  if (enableProfilerTimer && enableComponentPerformanceTrack) {
+    throw new Error('Not implemented yet.');
+  }
+
+  pendingEffectsStatus = NO_PENDING_EFFECTS;
+
+  pendingViewTransition = null; // The view transition has now fully started.
+
+  // Tell Scheduler to yield at the end of the frame, so the browser has an
+  // opportunity to paint.
+  requestPaint();
+
+  const root = pendingEffectsRoot;
+  const finishedWork = pendingFinishedWork;
+  const lanes = pendingEffectsLanes;
+  const recoverableErrors = pendingRecoverableErrors;
+  const didIncludeRenderPhaseUpdate = pendingDidIncludeRenderPhaseUpdate;
+
+  const passiveSubtreeMask =
+    enableViewTransition && includesOnlyViewTransitionEligibleLanes(lanes)
+      ? PassiveTransitionMask
+      : PassiveMask;
+  const rootDidHavePassiveEffects = // If this subtree rendered with profiling this commit, we need to visit it to log it.
+    (enableProfilerTimer &&
+      enableComponentPerformanceTrack &&
+      finishedWork.actualDuration !== 0) ||
+    (finishedWork.subtreeFlags & passiveSubtreeMask) !== NoFlags ||
+    (finishedWork.flags & passiveSubtreeMask) !== NoFlags;
+
+  if (rootDidHavePassiveEffects) {
+    pendingEffectsStatus = PENDING_PASSIVE_PHASE;
+  } else {
+    pendingEffectsStatus = NO_PENDING_EFFECTS;
+    pendingEffectsRoot = (null: any); // Clear for GC purposes.
+    pendingFinishedWork = (null: any); // Clear for GC purposes.
+    // There were no passive effects, so we can immediately release the cache
+    // pool for this render.
+    releaseRootPooledCache(root, root.pendingLanes);
+    if (__DEV__) {
+      nestedPassiveUpdateCount = 0;
+      rootWithPassiveNestedUpdates = null;
+    }
+  }
+
+  // Read this again, since an effect might have updated it
+  let remainingLanes = root.pendingLanes;
+
+  // Check if there's remaining work on this root
+  // TODO: This is part of the `componentDidCatch` implementation. Its purpose
+  // is to detect whether something might have called setState inside
+  // `componentDidCatch`. The mechanism is known to be flawed because `setState`
+  // inside `componentDidCatch` is itself flawed — that's why we recommend
+  // `getDerivedStateFromError` instead. However, it could be improved by
+  // checking if remainingLanes includes Sync work, instead of whether there's
+  // any work remaining at all (which would also include stuff like Suspense
+  // retries or transitions). It's been like this for a while, though, so fixing
+  // it probably isn't that urgent.
+  if (remainingLanes === NoLanes) {
+    // If there's no remaining work, we can clear the set of already failed
+    // error boundaries.
+    legacyErrorBoundariesThatAlreadyFailed = null;
+  }
+
+  if (__DEV__) {
+    if (!rootDidHavePassiveEffects) {
+      // 这里好像就是开发环境 effects 每次都触发两次的原因？
+      commitDoubleInvokeEffectsInDEV(root, false);
+    }
+  }
+
+  const renderPriority = lanesToEventPriority(lanes);
+  onCommitRootDevTools(finishedWork.stateNode, renderPriority);
+
+  if (enableUpdaterTracking) {
+    if (isDevToolsPresent) {
+      root.memoizedUpdaters.clear();
+    }
+  }
+
+  if (__DEV__) {
+    onCommitRootTestSelector();
+  }
+
+  if (recoverableErrors !== null) {
+    throw new Error('Not implemented yet.');
+  }
+
+  if (enableViewTransition) {
+    // We should now be after the startViewTransition's .ready call which is late enough
+    // to start animating any pseudo-elements. We do this before flushing any passive
+    // effects or spawned sync work since this is still part of the previous commit.
+    // Even though conceptually it's like its own task between layout effets and passive.
+    const pendingEvents = pendingViewTransitionEvents;
+    let pendingTypes = pendingTransitionTypes;
+    pendingTransitionTypes = null;
+    if (pendingEvents !== null) {
+      throw new Error('Not implemented yet.');
+    }
+  }
+
+  // If the passive effects are the result of a discrete render, flush them
+  // synchronously at the end of the current task so that the result is
+  // immediately observable. Otherwise, we assume that they are not
+  // order-dependent and do not need to be observed by external systems, so we
+  // can wait until after paint.
+  // TODO: We can optimize this by not scheduling the callback earlier. Since we
+  // currently schedule the callback in multiple places, will wait until those
+  // are consolidated.
+  if (
+    includesSyncLane(pendingEffectsLanes) &&
+    (disableLegacyMode || root.tag !== LegacyRoot)
+  ) {
+    flushPendingEffects();
+  }
+
+  // Always call this before exiting `commitRoot`, to ensure that any
+  // additional work on this root is scheduled.
+  ensureRootIsScheduled(root);
+
+  // Read this again, since a passive effect might have updated it
+  remainingLanes = root.pendingLanes;
+
+  // Check if this render scheduled a cascading synchronous update. This is a
+  // heurstic to detect infinite update loops. We are intentionally excluding
+  // hydration lanes in this check, because render triggered by selective
+  // hydration is conceptually not an update.
+  if (
+    // Check if there was a recursive update spawned by this render, in either
+    // the render phase or the commit phase. We track these explicitly because
+    // we can't infer from the remaining lanes alone.
+    (enableInfiniteRenderLoopDetection &&
+      (didIncludeRenderPhaseUpdate || didIncludeCommitPhaseUpdate)) ||
+    // Was the finished render the result of an update (not hydration)?
+    (includesSomeLane(lanes, UpdateLanes) &&
+      // Did it schedule a sync update?
+      includesSomeLane(remainingLanes, SyncUpdateLanes))
+  ) {
+    throw new Error('Not implemented yet.');
+  } else {
+    nestedUpdateCount = 0;
+  }
+
+  if (enableProfilerTimer && enableComponentPerformanceTrack) {
+    if (!rootDidHavePassiveEffects) {
+      // finalizeRender(lanes, commitEndTime);
+      throw new Error('Not implemented yet.');
+    }
+  }
+
+  // Eagerly flush any event replaying that we unblocked within this commit.
+  // This ensures that those are observed before we render any new changes.
+  if (supportsHydration) {
+    flushHydrationEvents();
+  }
+
+  // If layout work was scheduled, flush it now.
+  flushSyncWorkOnAllRoots();
+
+  if (enableSchedulingProfiler) {
+    // markCommitStopped();
+    throw new Error('Not implemented yet.');
+  }
+
+  if (enableTransitionTracing) {
+    throw new Error('Not implemented yet.');
+  }
+}
+
+function commitDoubleInvokeEffectsInDEV(
+  root: FiberRoot,
+  hasPassiveEffects: boolean,
+) {
+  if (__DEV__) {
+    if (disableLegacyMode || root.tag !== LegacyRoot) {
+      let doubleInvokeEffects = true;
+
+      if (
+        (disableLegacyMode || root.tag === ConcurrentRoot) &&
+        !(root.current.mode & (StrictLegacyMode | StrictEffectsMode))
+      ) {
+        doubleInvokeEffects = false;
+      }
+      recursivelyTraverseAndDoubleInvokeEffectsInDEV(
+        root,
+        root.current,
+        doubleInvokeEffects,
+      );
+    } else {
+      throw new Error('Not implemented yet.');
+    }
+  }
+}
+
+function recursivelyTraverseAndDoubleInvokeEffectsInDEV(
+  root: FiberRoot,
+  parentFiber: Fiber,
+  isInStrictMode: boolean,
+) {
+  if ((parentFiber.subtreeFlags & (PlacementDEV | Visibility)) === NoFlags) {
+    // Parent's descendants have already had effects double invoked.
+    // Early exit to avoid unnecessary tree traversal.
+    return;
+  }
+  let child = parentFiber.child;
+  while (child !== null) {
+    doubleInvokeEffectsInDEVIfNecessary(root, child, isInStrictMode);
+    child = child.sibling;
+  }
+}
+
+function doubleInvokeEffectsInDEVIfNecessary(
+  root: FiberRoot,
+  fiber: Fiber,
+  parentIsInStrictMode: boolean,
+) {
+  const isStrictModeFiber = fiber.type === REACT_STRICT_MODE_TYPE;
+  const isInStrictMode = parentIsInStrictMode || isStrictModeFiber;
+
+  // First case: the fiber **is not** of type OffscreenComponent. No
+  // special rules apply to double invoking effects.
+  if (fiber.tag !== OffscreenComponent) {
+    throw new Error('Not implemented yet.');
+  }
+
+  // Second case: the fiber **is** of type OffscreenComponent.
+  // This branch contains cases specific to Offscreen.
+  if (fiber.memoizedState === null) {
+    throw new Error('Not implemented yet.');
+  }
+}
+
+function releaseRootPooledCache(root: FiberRoot, remainingLanes: Lanes) {
+  const pooledCacheLanes = (root.pooledCacheLanes &= remainingLanes);
+  if (pooledCacheLanes === NoLanes) {
+    // None of the remaining work relies on the cache pool. Clear it so
+    // subsequent requests get a new cache
+    const pooledCache = root.pooledCache;
+    if (pooledCache != null) {
+      root.pooledCache = null;
+      releaseCache(pooledCache);
+    }
+  }
 }
 
 function flushPassiveEffects(): boolean {
@@ -1333,7 +1575,6 @@ function finishConcurrentRender(
       renderEndTime,
     );
   }
-  throw new Error('Not implemented yet.');
 }
 
 function commitRootWhenReady(

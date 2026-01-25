@@ -108,10 +108,10 @@ import {
   DOCUMENT_FRAGMENT_NODE,
 } from './HTMLNodeType';
 
-// import {
-//   flushEventReplaying,
-//   retryIfBlockedOn,
-// } from '../events/ReactDOMEventReplaying';
+import {
+  flushEventReplaying,
+  // retryIfBlockedOn,
+} from '../events/ReactDOMEventReplaying';
 
 import {
   enableCreateEventHandleAPI,
@@ -927,4 +927,16 @@ export function resetAfterCommit(containerInfo: Container): void {
   ReactBrowserEventEmitterSetEnabled(eventsEnabled);
   eventsEnabled = null;
   selectionInformation = null;
+}
+
+// -------------------
+//     Test Selectors
+// -------------------
+
+export const supportsTestSelectors = true;
+
+export function flushHydrationEvents(): void {
+  if (enableHydrationChangeEvent) {
+    flushEventReplaying();
+  }
 }

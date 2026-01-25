@@ -417,6 +417,12 @@ function requestHostCallback() {
   }
 }
 
+function requestPaint() {
+  if (enableRequestPaint) {
+    needsPaint = true;
+  }
+}
+
 export {
   ImmediatePriority as unstable_ImmediatePriority,
   UserBlockingPriority as unstable_UserBlockingPriority,
@@ -430,7 +436,7 @@ export {
   // unstable_wrapCallback,
   unstable_getCurrentPriorityLevel,
   // shouldYieldToHost as unstable_shouldYield,
-  // requestPaint as unstable_requestPaint,
+  requestPaint as unstable_requestPaint,
   getCurrentTime as unstable_now,
   // forceFrameRate as unstable_forceFrameRate,
 };

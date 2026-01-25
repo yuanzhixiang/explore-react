@@ -10,7 +10,7 @@
 import type {Lane, Lanes} from './ReactFiberLane';
 import type {Fiber, FiberRoot} from './ReactInternalTypes';
 import type {ReactNodeList, Wakeable} from 'shared/ReactTypes';
-// import type {EventPriority} from './ReactEventPriorities';
+import type {EventPriority} from './ReactEventPriorities';
 // import type {DevToolsProfilingHooks} from 'react-devtools-shared/src/backend/types';
 // TODO: This import doesn't work because the DevTools depend on the DOM version of React
 // and to properly type check against DOM React we can't also type check again non-DOM
@@ -22,12 +22,12 @@ import {
   enableProfilerTimer,
   enableSchedulingProfiler,
 } from 'shared/ReactFeatureFlags';
-// import {
-//   DiscreteEventPriority,
-//   ContinuousEventPriority,
-//   DefaultEventPriority,
-//   IdleEventPriority,
-// } from './ReactEventPriorities';
+import {
+  DiscreteEventPriority,
+  ContinuousEventPriority,
+  DefaultEventPriority,
+  IdleEventPriority,
+} from './ReactEventPriorities';
 import {
   ImmediatePriority as ImmediateSchedulerPriority,
   UserBlockingPriority as UserBlockingSchedulerPriority,
@@ -101,6 +101,49 @@ export function setIsStrictModeForDevtools(newIsStrictMode: boolean) {
   if (injectedHook && typeof injectedHook.setStrictMode === 'function') {
     try {
       injectedHook.setStrictMode(rendererID, newIsStrictMode);
+    } catch (err) {
+      if (__DEV__) {
+        if (!hasLoggedError) {
+          hasLoggedError = true;
+          console.error('React instrumentation encountered an error: %o', err);
+        }
+      }
+    }
+  }
+}
+
+export function onCommitRoot(root: FiberRoot, eventPriority: EventPriority) {
+  if (injectedHook && typeof injectedHook.onCommitFiberRoot === 'function') {
+    try {
+      const didError = (root.current.flags & DidCapture) === DidCapture;
+      if (enableProfilerTimer) {
+        let schedulerPriority;
+        switch (eventPriority) {
+          case DiscreteEventPriority:
+            schedulerPriority = ImmediateSchedulerPriority;
+            break;
+          case ContinuousEventPriority:
+            schedulerPriority = UserBlockingSchedulerPriority;
+            break;
+          case DefaultEventPriority:
+            schedulerPriority = NormalSchedulerPriority;
+            break;
+          case IdleEventPriority:
+            schedulerPriority = IdleSchedulerPriority;
+            break;
+          default:
+            schedulerPriority = NormalSchedulerPriority;
+            break;
+        }
+        injectedHook.onCommitFiberRoot(
+          rendererID,
+          root,
+          schedulerPriority,
+          didError,
+        );
+      } else {
+        injectedHook.onCommitFiberRoot(rendererID, root, undefined, didError);
+      }
     } catch (err) {
       if (__DEV__) {
         if (!hasLoggedError) {

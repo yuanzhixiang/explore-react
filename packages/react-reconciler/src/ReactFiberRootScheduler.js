@@ -569,7 +569,21 @@ function performWorkOnRootViaSchedulerTask(
   // we can remove this, since we track expiration ourselves.
   const forceSync = !disableSchedulerTimeoutInWorkLoop && didTimeout;
   performWorkOnRoot(root, lanes, forceSync);
-  throw new Error('Not implemented');
+
+  // The work loop yielded, but there may or may not be work left at the current
+  // priority. Need to determine whether we need to schedule a continuation.
+  // Usually `scheduleTaskForRootDuringMicrotask` only runs inside a microtask;
+  // however, since most of the logic for determining if we need a continuation
+  // versus a new task is the same, we cheat a bit and call it here. This is
+  // only safe to do because we know we're at the end of the browser task.
+  // So although it's not an actual microtask, it might as well be.
+  scheduleTaskForRootDuringMicrotask(root, now());
+  if (root.callbackNode != null && root.callbackNode === originalCallbackNode) {
+    // The task node scheduled for this root is the same one that's
+    // currently executed. Need to return a continuation.
+    return performWorkOnRootViaSchedulerTask.bind(null, root);
+  }
+  return null;
 }
 
 const fakeActCallbackNode = {};
@@ -618,12 +632,39 @@ function flushSyncWorkAcrossRoots_impl(
         if (syncTransitionLanes !== NoLanes) {
           throw new Error('Not implemented');
         } else {
-          throw new Error('Not implemented');
+          const workInProgressRoot = getWorkInProgressRoot();
+          const workInProgressRootRenderLanes =
+            getWorkInProgressRootRenderLanes();
+          const rootHasPendingCommit =
+            root.cancelPendingCommit !== null ||
+            root.timeoutHandle !== noTimeout;
+          const nextLanes = getNextLanes(
+            root,
+            root === workInProgressRoot
+              ? workInProgressRootRenderLanes
+              : NoLanes,
+            rootHasPendingCommit,
+          );
+          if (
+            (includesSyncLane(nextLanes) ||
+              (enableGestureTransition && isGestureRender(nextLanes))) &&
+            !checkIfRootIsPrerendering(root, nextLanes)
+          ) {
+            // This root has pending sync work. Flush it now.
+            didPerformSomeWork = true;
+            // performSyncWorkOnRoot(root, nextLanes);
+            throw new Error('Not implemented yet');
+          }
         }
       }
       root = root.next;
     }
-    throw new Error('Not implemented');
   } while (didPerformSomeWork);
   isFlushingWork = false;
+}
+
+export function flushSyncWorkOnAllRoots() {
+  // This is allowed to be called synchronously, but the caller should check
+  // the execution context first.
+  flushSyncWorkAcrossRoots_impl(NoLanes, false);
 }
