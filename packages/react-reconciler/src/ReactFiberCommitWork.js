@@ -125,14 +125,14 @@ import {
   // popNestedEffectDurations,
   // bubbleNestedEffectDurations,
   resetComponentEffectTimers,
-  // pushComponentEffectStart,
-  // popComponentEffectStart,
-  // pushComponentEffectDuration,
-  // popComponentEffectDuration,
-  // pushComponentEffectErrors,
-  // popComponentEffectErrors,
-  // pushComponentEffectDidSpawnUpdate,
-  // popComponentEffectDidSpawnUpdate,
+  pushComponentEffectStart,
+  popComponentEffectStart,
+  pushComponentEffectDuration,
+  popComponentEffectDuration,
+  pushComponentEffectErrors,
+  popComponentEffectErrors,
+  pushComponentEffectDidSpawnUpdate,
+  popComponentEffectDidSpawnUpdate,
   componentEffectStartTime,
   componentEffectEndTime,
   componentEffectDuration,
@@ -217,47 +217,47 @@ import {
   TransitionTracingMarker,
 } from './ReactFiberTracingMarkerComponent';
 // import {getViewTransitionClassName} from './ReactFiberViewTransitionComponent';
-// import {
-//   commitHookLayoutEffects,
-//   commitHookLayoutUnmountEffects,
-//   commitHookEffectListMount,
-//   commitHookEffectListUnmount,
-//   commitHookPassiveMountEffects,
-//   commitHookPassiveUnmountEffects,
-//   commitClassLayoutLifecycles,
-//   commitClassDidMount,
-//   commitClassCallbacks,
-//   commitClassHiddenCallbacks,
-//   commitClassSnapshot,
-//   safelyCallComponentWillUnmount,
-//   safelyAttachRef,
-//   safelyDetachRef,
-//   commitProfilerUpdate,
-//   commitProfilerPostCommit,
-//   commitRootCallbacks,
-// } from './ReactFiberCommitEffects';
-// import {
-//   commitHostMount,
-//   commitHostHydratedInstance,
-//   commitHostUpdate,
-//   commitHostTextUpdate,
-//   commitHostResetTextContent,
-//   commitShowHideSuspenseBoundary,
-//   commitShowHideHostInstance,
-//   commitShowHideHostTextInstance,
-//   commitHostPlacement,
-//   commitHostRootContainerChildren,
-//   commitHostPortalContainerChildren,
-//   commitHostHydratedContainer,
-//   commitHostHydratedActivity,
-//   commitHostHydratedSuspense,
-//   commitHostRemoveChildFromContainer,
-//   commitHostRemoveChild,
-//   commitHostSingletonAcquisition,
-//   commitHostSingletonRelease,
-//   commitFragmentInstanceDeletionEffects,
-//   commitFragmentInstanceInsertionEffects,
-// } from './ReactFiberCommitHostEffects';
+import {
+  //   commitHookLayoutEffects,
+  //   commitHookLayoutUnmountEffects,
+  //   commitHookEffectListMount,
+  //   commitHookEffectListUnmount,
+  //   commitHookPassiveMountEffects,
+  //   commitHookPassiveUnmountEffects,
+  //   commitClassLayoutLifecycles,
+  //   commitClassDidMount,
+  //   commitClassCallbacks,
+  //   commitClassHiddenCallbacks,
+  //   commitClassSnapshot,
+  //   safelyCallComponentWillUnmount,
+  //   safelyAttachRef,
+  safelyDetachRef,
+  //   commitProfilerUpdate,
+  //   commitProfilerPostCommit,
+  //   commitRootCallbacks,
+} from './ReactFiberCommitEffects';
+import {
+  //   commitHostMount,
+  //   commitHostHydratedInstance,
+  //   commitHostUpdate,
+  //   commitHostTextUpdate,
+  //   commitHostResetTextContent,
+  //   commitShowHideSuspenseBoundary,
+  //   commitShowHideHostInstance,
+  //   commitShowHideHostTextInstance,
+  //   commitHostPlacement,
+  //   commitHostRootContainerChildren,
+  //   commitHostPortalContainerChildren,
+  //   commitHostHydratedContainer,
+  //   commitHostHydratedActivity,
+  //   commitHostHydratedSuspense,
+  //   commitHostRemoveChildFromContainer,
+  //   commitHostRemoveChild,
+  //   commitHostSingletonAcquisition,
+  //   commitHostSingletonRelease,
+  commitFragmentInstanceDeletionEffects,
+  //   commitFragmentInstanceInsertionEffects,
+} from './ReactFiberCommitHostEffects';
 import {
   //   trackEnterViewTransitions,
   //   commitEnterViewTransitions,
@@ -517,5 +517,252 @@ function commitMutationEffectsOnFiber(
   root: FiberRoot,
   lanes: Lanes,
 ) {
-  throw new Error('Not implemented yet.');
+  const prevEffectStart = pushComponentEffectStart();
+  const prevEffectDuration = pushComponentEffectDuration();
+  const prevEffectErrors = pushComponentEffectErrors();
+  const prevEffectDidSpawnUpdate = pushComponentEffectDidSpawnUpdate();
+  const current = finishedWork.alternate;
+  const flags = finishedWork.flags;
+
+  switch (finishedWork.tag) {
+    case FunctionComponent:
+    case ForwardRef:
+    case MemoComponent:
+    case SimpleMemoComponent: {
+      // // TODO (Offscreen) Check: flags & LayoutStatic
+      // commitHookLayoutUnmountEffects(
+      //   finishedWork,
+      //   finishedWork.return,
+      //   HookLayout,
+      // );
+      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case ClassComponent: {
+      // TODO (Offscreen) Check: flags & RefStatic
+      // safelyDetachRef(finishedWork, finishedWork.return);
+
+      // const instance = finishedWork.stateNode;
+      // if (typeof instance.componentWillUnmount === 'function') {
+      //   safelyCallComponentWillUnmount(
+      //     finishedWork,
+      //     finishedWork.return,
+      //     instance,
+      //   );
+      // }
+
+      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case HostSingleton: {
+      // if (supportsSingletons) {
+      //   // TODO (Offscreen) Check: flags & RefStatic
+      //   commitHostSingletonRelease(finishedWork);
+      // }
+      // Expected fallthrough to HostComponent
+      throw new Error('Not implemented yet.');
+    }
+    case HostHoistable:
+    case HostComponent: {
+      // // TODO (Offscreen) Check: flags & RefStatic
+      // safelyDetachRef(finishedWork, finishedWork.return);
+
+      // if (enableFragmentRefs && finishedWork.tag === HostComponent) {
+      //   commitFragmentInstanceDeletionEffects(finishedWork);
+      // }
+
+      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case OffscreenComponent: {
+      // const isHidden = finishedWork.memoizedState !== null;
+      // if (isHidden) {
+      //   // Nested Offscreen tree is already hidden. Don't disappear
+      //   // its effects.
+      // } else {
+      //   recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      // }
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case ViewTransitionComponent: {
+      // if (enableViewTransition) {
+      //   if (__DEV__) {
+      //     if (finishedWork.flags & ViewTransitionNamedStatic) {
+      //       untrackNamedViewTransition(finishedWork);
+      //     }
+      //   }
+      //   safelyDetachRef(finishedWork, finishedWork.return);
+      // }
+      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case Fragment: {
+      // if (enableFragmentRefs) {
+      //   safelyDetachRef(finishedWork, finishedWork.return);
+      // }
+      // Fallthrough
+      throw new Error('Not implemented yet.');
+    }
+    default: {
+      recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      break;
+    }
+  }
+
+  if (
+    enableProfilerTimer &&
+    enableProfilerCommitHooks &&
+    enableComponentPerformanceTrack &&
+    (finishedWork.mode & ProfileMode) !== NoMode &&
+    componentEffectStartTime >= 0 &&
+    componentEffectEndTime >= 0 &&
+    (componentEffectSpawnedUpdate || componentEffectDuration > 0.05)
+  ) {
+    // logComponentEffect(
+    //   finishedWork,
+    //   componentEffectStartTime,
+    //   componentEffectEndTime,
+    //   componentEffectDuration,
+    //   componentEffectErrors,
+    // );
+    throw new Error('Not implemented yet.');
+  }
+
+  popComponentEffectStart(prevEffectStart);
+  popComponentEffectDuration(prevEffectDuration);
+  popComponentEffectErrors(prevEffectErrors);
+  popComponentEffectDidSpawnUpdate(prevEffectDidSpawnUpdate);
+}
+
+function recursivelyTraverseDisappearLayoutEffects(parentFiber: Fiber) {
+  // TODO (Offscreen) Check: subtreeflags & (RefStatic | LayoutStatic)
+  let child = parentFiber.child;
+  while (child !== null) {
+    disappearLayoutEffects(child);
+    child = child.sibling;
+  }
+}
+
+export function disappearLayoutEffects(finishedWork: Fiber) {
+  const prevEffectStart = pushComponentEffectStart();
+  const prevEffectDuration = pushComponentEffectDuration();
+  const prevEffectErrors = pushComponentEffectErrors();
+  const prevEffectDidSpawnUpdate = pushComponentEffectDidSpawnUpdate();
+  switch (finishedWork.tag) {
+    case FunctionComponent:
+    case ForwardRef:
+    case MemoComponent:
+    case SimpleMemoComponent: {
+      // // TODO (Offscreen) Check: flags & LayoutStatic
+      // commitHookLayoutUnmountEffects(
+      //   finishedWork,
+      //   finishedWork.return,
+      //   HookLayout,
+      // );
+      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case ClassComponent: {
+      // // TODO (Offscreen) Check: flags & RefStatic
+      // safelyDetachRef(finishedWork, finishedWork.return);
+
+      // const instance = finishedWork.stateNode;
+      // if (typeof instance.componentWillUnmount === 'function') {
+      //   safelyCallComponentWillUnmount(
+      //     finishedWork,
+      //     finishedWork.return,
+      //     instance,
+      //   );
+      // }
+
+      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case HostSingleton: {
+      // if (supportsSingletons) {
+      //   // TODO (Offscreen) Check: flags & RefStatic
+      //   commitHostSingletonRelease(finishedWork);
+      // }
+      throw new Error('Not implemented yet.');
+      // Expected fallthrough to HostComponent
+    }
+    case HostHoistable:
+    case HostComponent: {
+      // TODO (Offscreen) Check: flags & RefStatic
+      safelyDetachRef(finishedWork, finishedWork.return);
+
+      if (enableFragmentRefs && finishedWork.tag === HostComponent) {
+        commitFragmentInstanceDeletionEffects(finishedWork);
+      }
+
+      recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      break;
+    }
+    case OffscreenComponent: {
+      // const isHidden = finishedWork.memoizedState !== null;
+      // if (isHidden) {
+      //   // Nested Offscreen tree is already hidden. Don't disappear
+      //   // its effects.
+      // } else {
+      //   recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      // }
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case ViewTransitionComponent: {
+      // if (enableViewTransition) {
+      //   if (__DEV__) {
+      //     if (finishedWork.flags & ViewTransitionNamedStatic) {
+      //       untrackNamedViewTransition(finishedWork);
+      //     }
+      //   }
+      //   safelyDetachRef(finishedWork, finishedWork.return);
+      // }
+      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case Fragment: {
+      // if (enableFragmentRefs) {
+      //   safelyDetachRef(finishedWork, finishedWork.return);
+      // }
+      throw new Error('Not implemented yet.');
+      // Fallthrough
+    }
+    default: {
+      recursivelyTraverseDisappearLayoutEffects(finishedWork);
+      break;
+    }
+  }
+
+  if (
+    enableProfilerTimer &&
+    enableProfilerCommitHooks &&
+    enableComponentPerformanceTrack &&
+    (finishedWork.mode & ProfileMode) !== NoMode &&
+    componentEffectStartTime >= 0 &&
+    componentEffectEndTime >= 0 &&
+    (componentEffectSpawnedUpdate || componentEffectDuration > 0.05)
+  ) {
+    // logComponentEffect(
+    //   finishedWork,
+    //   componentEffectStartTime,
+    //   componentEffectEndTime,
+    //   componentEffectDuration,
+    //   componentEffectErrors,
+    // );
+    throw new Error('Not implemented yet.');
+  }
+
+  popComponentEffectStart(prevEffectStart);
+  popComponentEffectDuration(prevEffectDuration);
+  popComponentEffectErrors(prevEffectErrors);
+  popComponentEffectDidSpawnUpdate(prevEffectDidSpawnUpdate);
 }

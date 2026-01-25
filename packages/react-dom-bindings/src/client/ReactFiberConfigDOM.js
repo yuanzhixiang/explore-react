@@ -914,6 +914,17 @@ export function clearContainer(container: Container): void {
   }
 }
 
+export function isSingletonScope(type: string): boolean {
+  return type === 'head';
+}
+
 function clearContainerSparingly(container: Node) {
   throw new Error('Not implemented yet.');
+}
+
+export function resetAfterCommit(containerInfo: Container): void {
+  restoreSelection(selectionInformation, containerInfo);
+  ReactBrowserEventEmitterSetEnabled(eventsEnabled);
+  eventsEnabled = null;
+  selectionInformation = null;
 }

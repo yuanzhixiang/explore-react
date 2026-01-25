@@ -95,7 +95,7 @@ import {
 // } from './ReactFiberPerformanceTrack';
 
 import {
-  // resetAfterCommit,
+  resetAfterCommit,
   // scheduleTimeout,
   cancelTimeout,
   noTimeout,
@@ -1010,11 +1010,11 @@ function flushMutationEffects(): void {
     try {
       // The next phase is the mutation phase, where we mutate the host tree.
       commitMutationEffects(root, finishedWork, lanes);
-
       if (enableCreateEventHandleAPI) {
-        if (shouldFireAfterActiveInstanceBlur) {
-          afterActiveInstanceBlur();
-        }
+        // if (shouldFireAfterActiveInstanceBlur) {
+        //   afterActiveInstanceBlur();
+        // }
+        throw new Error('Not implemented yet');
       }
       resetAfterCommit(root.containerInfo);
     } finally {

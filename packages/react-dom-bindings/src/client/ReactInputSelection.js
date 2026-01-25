@@ -95,5 +95,10 @@ export function hasSelectionCapabilities(elem) {
  * nodes and place them back in, resulting in focus being lost.
  */
 export function restoreSelection(priorSelectionInformation, containerInfo) {
-  throw new Error('Not implemented yet.');
+  const curFocusedElem = getActiveElementDeep(containerInfo);
+  const priorFocusedElem = priorSelectionInformation.focusedElem;
+  const priorSelectionRange = priorSelectionInformation.selectionRange;
+  if (curFocusedElem !== priorFocusedElem && isInDocument(priorFocusedElem)) {
+    throw new Error('Not implemented yet.');
+  }
 }

@@ -179,3 +179,81 @@ export function resetComponentEffectTimers(): void {
   componentEffectStartTime = -1.1;
   componentEffectEndTime = -1.1;
 }
+
+export function pushComponentEffectStart(): number {
+  if (!enableProfilerTimer || !enableProfilerCommitHooks) {
+    return 0;
+  }
+  const prevEffectStart = componentEffectStartTime;
+  componentEffectStartTime = -1.1; // Track the next start.
+  return prevEffectStart;
+}
+
+export function pushComponentEffectDuration(): number {
+  if (!enableProfilerTimer || !enableProfilerCommitHooks) {
+    return 0;
+  }
+  const prevEffectDuration = componentEffectDuration;
+  componentEffectDuration = -0; // Reset component level duration.
+  return prevEffectDuration;
+}
+
+export function pushComponentEffectErrors(): null | Array<
+  CapturedValue<mixed>,
+> {
+  if (!enableProfilerTimer || !enableProfilerCommitHooks) {
+    return null;
+  }
+  const prevErrors = componentEffectErrors;
+  componentEffectErrors = null;
+  return prevErrors;
+}
+
+export function pushComponentEffectDidSpawnUpdate(): boolean {
+  if (!enableProfilerTimer || !enableProfilerCommitHooks) {
+    return false;
+  }
+
+  const prev = componentEffectSpawnedUpdate;
+  componentEffectSpawnedUpdate = false; // Reset.
+  return prev;
+}
+
+export function popComponentEffectStart(prevEffectStart: number): void {
+  if (!enableProfilerTimer || !enableProfilerCommitHooks) {
+    return;
+  }
+  // If the parent component didn't have a start time, we let this current time persist.
+  if (prevEffectStart >= 0) {
+    // Otherwise, we restore the previous parent's start time.
+    componentEffectStartTime = prevEffectStart;
+  }
+}
+
+export function popComponentEffectDuration(prevEffectDuration: number): void {
+  if (!enableProfilerTimer || !enableProfilerCommitHooks) {
+    return;
+  }
+  // If the parent component didn't have a start time, we let this current time persist.
+  if (prevEffectDuration >= 0) {
+    // Otherwise, we restore the previous parent's start time.
+    componentEffectDuration = prevEffectDuration;
+  }
+}
+
+export function popComponentEffectErrors(
+  prevErrors: null | Array<CapturedValue<mixed>>,
+): void {
+  if (!enableProfilerTimer || !enableProfilerCommitHooks) {
+    return;
+  }
+  componentEffectErrors = prevErrors;
+}
+
+export function popComponentEffectDidSpawnUpdate(previousValue: boolean): void {
+  if (!enableProfilerTimer || !enableProfilerCommitHooks) {
+    return;
+  }
+
+  componentEffectSpawnedUpdate = previousValue;
+}
