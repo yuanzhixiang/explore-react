@@ -1037,7 +1037,37 @@ function flushLayoutEffects(): void {
   if (pendingEffectsStatus !== PENDING_LAYOUT_PHASE) {
     return;
   }
-  throw new Error('Not implemented yet.');
+
+  pendingEffectsStatus = NO_PENDING_EFFECTS;
+
+  if (enableProfilerTimer && enableComponentPerformanceTrack) {
+    throw new Error('Not implemented yet.');
+  }
+
+  const root = pendingEffectsRoot;
+  const finishedWork = pendingFinishedWork;
+  const lanes = pendingEffectsLanes;
+
+  if (enableDefaultTransitionIndicator) {
+    throw new Error('Not implemented yet.');
+  }
+
+  const subtreeHasLayoutEffects =
+    (finishedWork.subtreeFlags & LayoutMask) !== NoFlags;
+  const rootHasLayoutEffect = (finishedWork.flags & LayoutMask) !== NoFlags;
+
+  if (subtreeHasLayoutEffects || rootHasLayoutEffect) {
+    throw new Error('Not implemented yet.');
+  }
+
+  const completedRenderEndTime = pendingEffectsRenderEndTime;
+  const suspendedCommitReason = pendingSuspendedCommitReason;
+
+  if (enableProfilerTimer && enableComponentPerformanceTrack) {
+    throw new Error('Not implemented yet.');
+  }
+
+  pendingEffectsStatus = PENDING_AFTER_MUTATION_PHASE;
 }
 
 function flushSpawnedWork(): void {
