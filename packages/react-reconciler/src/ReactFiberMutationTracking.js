@@ -15,6 +15,15 @@ import {
 export let rootMutationContext: boolean = false;
 export let viewTransitionMutationContext: boolean = false;
 
+export function pushRootMutationContext(): void {
+  if (enableDefaultTransitionIndicator) {
+    rootMutationContext = false;
+  }
+  if (enableViewTransition) {
+    viewTransitionMutationContext = false;
+  }
+}
+
 export function trackHostMutation(): void {
   // This is extremely hot function that must be inlined. Don't add more stuff.
   if (enableViewTransition) {
@@ -24,5 +33,14 @@ export function trackHostMutation(): void {
     // it on the viewTransitionMutationContext and collect it when we pop
     // to avoid more than a single operation in this hot path.
     rootMutationContext = true;
+  }
+}
+
+export function popMutationContext(prev: boolean): void {
+  if (enableViewTransition) {
+    if (viewTransitionMutationContext) {
+      rootMutationContext = true;
+    }
+    viewTransitionMutationContext = prev;
   }
 }

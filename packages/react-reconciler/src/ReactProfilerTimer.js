@@ -257,3 +257,12 @@ export function popComponentEffectDidSpawnUpdate(previousValue: boolean): void {
 
   componentEffectSpawnedUpdate = previousValue;
 }
+
+export function pushNestedEffectDurations(): number {
+  if (!enableProfilerTimer || !enableProfilerCommitHooks) {
+    return 0;
+  }
+  const prevEffectDuration = profilerEffectDuration;
+  profilerEffectDuration = 0; // Reset counter.
+  return prevEffectDuration;
+}

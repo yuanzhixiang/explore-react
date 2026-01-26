@@ -376,6 +376,10 @@ export const cancelTimeout: any =
 export const noTimeout: -1 = -1;
 const localPromise = typeof Promise === 'function' ? Promise : undefined;
 
+type KeyedTagCache = Map<string, Array<Element>>;
+type DocumentTagCaches = Map<Document, KeyedTagCache>;
+let tagCaches: null | DocumentTagCaches = null;
+
 // -------------------
 //     Microtasks
 // -------------------
@@ -939,4 +943,21 @@ export function flushHydrationEvents(): void {
   if (enableHydrationChangeEvent) {
     flushEventReplaying();
   }
+}
+
+export function prepareToCommitHoistables() {
+  tagCaches = null;
+}
+
+// getRootNode is missing from IE and old jsdom versions
+export function getHoistableRoot(container: Container): HoistableRoot {
+  // $FlowFixMe[method-unbinding]
+  return typeof container.getRootNode === 'function'
+    ? /* $FlowFixMe[incompatible-cast] Flow types this as returning a `Node`,
+       * but it's either a `Document` or `ShadowRoot`. */
+      (container.getRootNode(): Document | ShadowRoot)
+    : container.nodeType === DOCUMENT_NODE
+      ? // $FlowFixMe[incompatible-cast] We've constrained this to be a Document which satisfies the return type
+        (container: Document)
+      : container.ownerDocument;
 }

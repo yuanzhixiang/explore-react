@@ -255,7 +255,23 @@ function processRootScheduleInMicrotask() {
     const next = root.next;
     const nextLanes = scheduleTaskForRootDuringMicrotask(root, currentTime);
     if (nextLanes === NoLane) {
-      throw new Error('Not implemented');
+      // This root has no more pending work. Remove it from the schedule. To
+      // guard against subtle reentrancy bugs, this microtask is the only place
+      // we do this — you can add roots to the schedule whenever, but you can
+      // only remove them here.
+
+      // Null this out so we know it's been removed from the schedule.
+      root.next = null;
+      if (prev === null) {
+        // This is the new head of the list
+        firstScheduledRoot = next;
+      } else {
+        prev.next = next;
+      }
+      if (next === null) {
+        // This is the new tail of the list
+        lastScheduledRoot = prev;
+      }
     } else {
       // This root still has work. Keep it in the list.
       // 保留这个 root 在链表中，因为它还有待处理的工作
@@ -673,4 +689,15 @@ export function flushSyncWorkOnAllRoots() {
   // This is allowed to be called synchronously, but the caller should check
   // the execution context first.
   flushSyncWorkAcrossRoots_impl(NoLanes, false);
+}
+
+export function markIndicatorHandled(root: FiberRoot): void {
+  if (enableDefaultTransitionIndicator) {
+    // The current transition event rendered a synchronous loading state.
+    // Clear it from the indicator lanes. We don't need to show a separate
+    // loading state for this lane.
+    root.indicatorLanes &= ~currentEventTransitionLane;
+    // markIsomorphicIndicatorHandled();
+    throw new Error('Not implemented yet.');
+  }
 }

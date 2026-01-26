@@ -21,7 +21,7 @@ import type {
 import type {Fiber, FiberRoot} from './ReactInternalTypes';
 import type {Lanes} from './ReactFiberLane';
 import {
-  // includesLoadingIndicatorLanes,
+  includesLoadingIndicatorLanes,
   // includesOnlySuspenseyCommitEligibleLanes,
   includesOnlyViewTransitionEligibleLanes,
 } from './ReactFiberLane';
@@ -121,7 +121,7 @@ import {
 } from './ReactFiberFlags';
 import {
   commitStartTime,
-  // pushNestedEffectDurations,
+  pushNestedEffectDurations,
   // popNestedEffectDurations,
   // bubbleNestedEffectDurations,
   resetComponentEffectTimers,
@@ -166,13 +166,13 @@ import {
   prepareForCommit,
   // beforeActiveInstanceBlur,
   // detachDeletedInstance,
-  // getHoistableRoot,
+  getHoistableRoot,
   // acquireResource,
   // releaseResource,
   // hydrateHoistable,
   // mountHoistable,
   // unmountHoistable,
-  // prepareToCommitHoistables,
+  prepareToCommitHoistables,
   // maySuspendCommitInSyncRender,
   // suspendInstance,
   // suspendResource,
@@ -245,7 +245,7 @@ import {
   //   commitShowHideSuspenseBoundary,
   //   commitShowHideHostInstance,
   //   commitShowHideHostTextInstance,
-  //   commitHostPlacement,
+  commitHostPlacement,
   //   commitHostRootContainerChildren,
   //   commitHostPortalContainerChildren,
   //   commitHostHydratedContainer,
@@ -275,18 +275,18 @@ import {
   //   pushViewTransitionCancelableScope,
   //   popViewTransitionCancelableScope,
 } from './ReactFiberCommitViewTransitions';
-// import {
-//   viewTransitionMutationContext,
-//   pushRootMutationContext,
-//   pushMutationContext,
-//   popMutationContext,
-//   rootMutationContext,
-// } from './ReactFiberMutationTracking';
+import {
+  //   viewTransitionMutationContext,
+  pushRootMutationContext,
+  //   pushMutationContext,
+  popMutationContext,
+  rootMutationContext,
+} from './ReactFiberMutationTracking';
 // import {
 //   trackNamedViewTransition,
 //   untrackNamedViewTransition,
 // } from './ReactFiberDuplicateViewTransitions';
-// import {markIndicatorHandled} from './ReactFiberRootScheduler';
+import {markIndicatorHandled} from './ReactFiberRootScheduler';
 import type {Flags} from './ReactFiberFlags';
 
 // Used during the commit phase to track the state of the Offscreen component stack.
@@ -493,6 +493,48 @@ function commitBeforeMutationEffectsOnFiber(
   }
 }
 
+// These are tracked on the stack as we recursively traverse a
+// deleted subtree.
+// TODO: Update these during the whole mutation phase, not just during
+// a deletion.
+let hostParent: Instance | Container | null = null;
+let hostParentIsContainer: boolean = false;
+
+function commitDeletionEffects(
+  root: FiberRoot,
+  returnFiber: Fiber,
+  deletedFiber: Fiber,
+) {
+  const prevEffectStart = pushComponentEffectStart();
+  throw new Error('Not implemented yet.');
+}
+
+function recursivelyTraverseMutationEffects(
+  root: FiberRoot,
+  parentFiber: Fiber,
+  lanes: Lanes,
+) {
+  // Deletions effects can be scheduled on any fiber type. They need to happen
+  // before the children effects have fired.
+  const deletions = parentFiber.deletions;
+  if (deletions !== null) {
+    for (let i = 0; i < deletions.length; i++) {
+      const childToDelete = deletions[i];
+      commitDeletionEffects(root, parentFiber, childToDelete);
+    }
+  }
+
+  if (parentFiber.subtreeFlags & (MutationMask | Cloned)) {
+    let child = parentFiber.child;
+    while (child !== null) {
+      commitMutationEffectsOnFiber(child, root, lanes);
+      child = child.sibling;
+    }
+  }
+}
+
+let currentHoistableRoot: HoistableRoot | null = null;
+
 export function commitMutationEffects(
   root: FiberRoot,
   finishedWork: Fiber,
@@ -524,93 +566,108 @@ function commitMutationEffectsOnFiber(
   const current = finishedWork.alternate;
   const flags = finishedWork.flags;
 
+  // The effect flag should be checked *after* we refine the type of fiber,
+  // because the fiber tag is more specific. An exception is any flag related
+  // to reconciliation, because those can be set on all fiber types.
   switch (finishedWork.tag) {
     case FunctionComponent:
     case ForwardRef:
     case MemoComponent:
     case SimpleMemoComponent: {
-      // // TODO (Offscreen) Check: flags & LayoutStatic
-      // commitHookLayoutUnmountEffects(
-      //   finishedWork,
-      //   finishedWork.return,
-      //   HookLayout,
-      // );
-      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
       // break;
       throw new Error('Not implemented yet.');
     }
     case ClassComponent: {
-      // TODO (Offscreen) Check: flags & RefStatic
-      // safelyDetachRef(finishedWork, finishedWork.return);
-
-      // const instance = finishedWork.stateNode;
-      // if (typeof instance.componentWillUnmount === 'function') {
-      //   safelyCallComponentWillUnmount(
-      //     finishedWork,
-      //     finishedWork.return,
-      //     instance,
-      //   );
-      // }
-
-      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
       // break;
       throw new Error('Not implemented yet.');
+    }
+    case HostHoistable: {
+      throw new Error('Not implemented yet.');
+      // Fall through
     }
     case HostSingleton: {
-      // if (supportsSingletons) {
-      //   // TODO (Offscreen) Check: flags & RefStatic
-      //   commitHostSingletonRelease(finishedWork);
-      // }
-      // Expected fallthrough to HostComponent
+      throw new Error('Not implemented yet.');
+      // Fall through
+    }
+    case HostComponent: {
       throw new Error('Not implemented yet.');
     }
-    case HostHoistable:
-    case HostComponent: {
-      // // TODO (Offscreen) Check: flags & RefStatic
-      // safelyDetachRef(finishedWork, finishedWork.return);
+    case HostText: {
+      throw new Error('Not implemented yet.');
+    }
+    case HostRoot: {
+      const prevProfilerEffectDuration = pushNestedEffectDurations();
 
-      // if (enableFragmentRefs && finishedWork.tag === HostComponent) {
-      //   commitFragmentInstanceDeletionEffects(finishedWork);
-      // }
+      pushRootMutationContext();
+      if (supportsResources) {
+        prepareToCommitHoistables();
 
-      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
-      // break;
+        const previousHoistableRoot = currentHoistableRoot;
+        currentHoistableRoot = getHoistableRoot(root.containerInfo);
+
+        recursivelyTraverseMutationEffects(root, finishedWork, lanes);
+        currentHoistableRoot = previousHoistableRoot;
+
+        commitReconciliationEffects(finishedWork, lanes);
+      } else {
+        throw new Error('Not implemented yet.');
+      }
+
+      if (flags & Update) {
+        throw new Error('Not implemented yet.');
+      }
+
+      if (needsFormReset) {
+        throw new Error('Not implemented yet.');
+      }
+
+      if (enableProfilerTimer && enableProfilerCommitHooks) {
+        throw new Error('Not implemented yet.');
+      }
+
+      popMutationContext(false);
+
+      if (
+        enableDefaultTransitionIndicator &&
+        rootMutationContext &&
+        includesLoadingIndicatorLanes(lanes)
+      ) {
+        // This root had a mutation. Mark this root as having rendered a manual
+        // loading state.
+        markIndicatorHandled(root);
+      }
+
+      break;
+    }
+    case HostPortal: {
+      throw new Error('Not implemented yet.');
+    }
+    case Profiler: {
+      throw new Error('Not implemented yet.');
+    }
+    case ActivityComponent: {
+      throw new Error('Not implemented yet.');
+    }
+    case SuspenseComponent: {
       throw new Error('Not implemented yet.');
     }
     case OffscreenComponent: {
-      // const isHidden = finishedWork.memoizedState !== null;
-      // if (isHidden) {
-      //   // Nested Offscreen tree is already hidden. Don't disappear
-      //   // its effects.
-      // } else {
-      //   recursivelyTraverseDisappearLayoutEffects(finishedWork);
-      // }
-      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case SuspenseListComponent: {
       throw new Error('Not implemented yet.');
     }
     case ViewTransitionComponent: {
-      // if (enableViewTransition) {
-      //   if (__DEV__) {
-      //     if (finishedWork.flags & ViewTransitionNamedStatic) {
-      //       untrackNamedViewTransition(finishedWork);
-      //     }
-      //   }
-      //   safelyDetachRef(finishedWork, finishedWork.return);
-      // }
-      // recursivelyTraverseDisappearLayoutEffects(finishedWork);
-      // break;
       throw new Error('Not implemented yet.');
     }
-    case Fragment: {
-      // if (enableFragmentRefs) {
-      //   safelyDetachRef(finishedWork, finishedWork.return);
-      // }
-      // Fallthrough
+    case ScopeComponent: {
       throw new Error('Not implemented yet.');
     }
+    case Fragment:
+      throw new Error('Not implemented yet.');
+    // Fallthrough
     default: {
-      recursivelyTraverseDisappearLayoutEffects(finishedWork);
-      break;
+      throw new Error('Not implemented yet.');
     }
   }
 
@@ -645,6 +702,27 @@ function recursivelyTraverseDisappearLayoutEffects(parentFiber: Fiber) {
   while (child !== null) {
     disappearLayoutEffects(child);
     child = child.sibling;
+  }
+}
+
+function commitReconciliationEffects(
+  finishedWork: Fiber,
+  committedLanes: Lanes,
+) {
+  // Placement effects (insertions, reorders) can be scheduled on any fiber
+  // type. They needs to happen after the children effects have fired, but
+  // before the effects on this fiber have fired.
+  const flags = finishedWork.flags;
+  if (flags & Placement) {
+    commitHostPlacement(finishedWork);
+    // Clear the "placement" from effect tag so that we know that this is
+    // inserted, before any life-cycles like componentDidMount gets called.
+    // TODO: findDOMNode doesn't rely on this any more but isMounted does
+    // and isMounted is deprecated anyway so we should be able to kill this.
+    finishedWork.flags &= ~Placement;
+  }
+  if (flags & Hydrating) {
+    finishedWork.flags &= ~Hydrating;
   }
 }
 

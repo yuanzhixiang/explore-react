@@ -168,19 +168,12 @@ const performWorkUntilDeadline = () => {
         // of the preceding one.
         // 如果还有任务要执行，就继续调度下一次执行
         // @why 我们暂时先注释这里，不然现在内部出现异常会导致死循环
-        // schedulePerformWorkUntilDeadline();
+        schedulePerformWorkUntilDeadline();
       } else {
         isMessageLoopRunning = false;
       }
     }
-
-    let schedulePerformWorkUntilDeadline;
-    if (typeof localSetImmediate === 'function') {
-      throw new Error('Not implemented');
-    }
-    throw new Error('Not implemented');
   }
-  throw new Error('Not implemented');
 };
 
 function flushWork(initialTime: number) {

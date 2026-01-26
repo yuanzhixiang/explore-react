@@ -835,3 +835,7 @@ export function markRootFinished(
     root.suspendedLanes |= freshlySpawnedRetryLanes;
   }
 }
+
+export function includesLoadingIndicatorLanes(lanes: Lanes): boolean {
+  return (lanes & (SyncLane | DefaultLane)) !== NoLanes;
+}

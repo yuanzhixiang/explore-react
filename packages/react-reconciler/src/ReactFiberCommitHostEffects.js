@@ -98,3 +98,7 @@ function isHostParent(fiber: Fiber): boolean {
 function isFragmentInstanceParent(fiber: Fiber): boolean {
   return fiber && fiber.tag === Fragment && fiber.stateNode !== null;
 }
+
+export function commitHostPlacement(finishedWork: Fiber) {
+  throw new Error('Not implemented yet.');
+}
