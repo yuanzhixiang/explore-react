@@ -390,7 +390,13 @@ function scheduleTaskForRootDuringMicrotask(
     // Suspended commit phase
     root.cancelPendingCommit !== null
   ) {
-    throw new Error('Not implemented');
+    // Fast path: There's nothing to work on.
+    if (existingCallbackNode !== null) {
+      cancelCallback(existingCallbackNode);
+    }
+    root.callbackNode = null;
+    root.callbackPriority = NoLane;
+    return NoLane;
   }
 
   // Schedule a new callback in the host environment.

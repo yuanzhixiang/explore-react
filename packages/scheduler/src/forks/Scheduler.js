@@ -173,6 +173,11 @@ const performWorkUntilDeadline = () => {
         isMessageLoopRunning = false;
       }
     }
+
+    let schedulePerformWorkUntilDeadline;
+    if (typeof localSetImmediate === 'function') {
+      throw new Error('Not implemented');
+    }
     throw new Error('Not implemented');
   }
   throw new Error('Not implemented');
@@ -204,9 +209,14 @@ function flushWork(initialTime: number) {
     console.log('Error occurred during flushWork: ', error);
     throw error;
   } finally {
-    throw new Error('Not implemented');
+    currentTask = null;
+    currentPriorityLevel = previousPriorityLevel;
+    isPerformingWork = false;
+    if (enableProfiling) {
+      const currentTime = getCurrentTime();
+      markSchedulerSuspended(currentTime);
+    }
   }
-  throw new Error('Not implemented');
 }
 
 function workLoop(initialTime: number) {
@@ -258,15 +268,36 @@ function workLoop(initialTime: number) {
       if (typeof continuationCallback === 'function') {
         throw new Error('Not implemented');
       } else {
-        throw new Error('Not implemented');
+        if (enableProfiling) {
+          throw new Error('Not implemented');
+        }
+        if (currentTask === peek(taskQueue)) {
+          pop(taskQueue);
+        }
+        advanceTimers(currentTime);
       }
-      throw new Error('Not implemented');
     } else {
       throw new Error('Not implemented');
     }
-    throw new Error('Not implemented');
+    currentTask = peek(taskQueue);
+    if (enableAlwaysYieldScheduler) {
+      if (currentTask === null || currentTask.expirationTime > currentTime) {
+        // This currentTask hasn't expired we yield to the browser task.
+        break;
+      }
+    }
   }
-  throw new Error('Not implemented');
+  // Return whether there's additional work
+  if (currentTask !== null) {
+    return true;
+  } else {
+    const firstTimer = peek(timerQueue);
+    if (firstTimer !== null) {
+      // requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
+      throw new Error('Not implemented yet');
+    }
+    return false;
+  }
 }
 
 let schedulePerformWorkUntilDeadline;
