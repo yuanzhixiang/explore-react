@@ -307,7 +307,12 @@ function createChildReconciler(
   }
 
   function placeSingleChild(newFiber: Fiber): Fiber {
-    throw new Error('Not implemented');
+    // This is simpler for the single child case. We only need to do a
+    // placement for inserting new children.
+    if (shouldTrackSideEffects && newFiber.alternate === null) {
+      newFiber.flags |= Placement | PlacementDEV;
+    }
+    return newFiber;
   }
 
   function updateTextNode(
@@ -437,7 +442,23 @@ function createChildReconciler(
     element: ReactElement,
     lanes: Lanes,
   ): Fiber {
-    throw new Error('Not implemented');
+    const key = element.key;
+    let child = currentFirstChild;
+    while (child !== null) {
+      throw new Error('Not implemented');
+    }
+
+    if (element.type === REACT_FRAGMENT_TYPE) {
+      throw new Error('Not implemented');
+    } else {
+      const created = createFiberFromElement(element, returnFiber.mode, lanes);
+      coerceRef(created, element);
+      created.return = returnFiber;
+      if (__DEV__) {
+        created._debugInfo = currentDebugInfo;
+      }
+      return created;
+    }
   }
 
   function reconcileSinglePortal(
@@ -486,19 +507,17 @@ function createChildReconciler(
     if (typeof newChild === 'object' && newChild !== null) {
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE: {
-          const created = createFiberFromElement(
-            newChild,
-            returnFiber.mode,
-            lanes,
+          const prevDebugInfo = pushDebugInfo(newChild._debugInfo);
+          const firstChild = placeSingleChild(
+            reconcileSingleElement(
+              returnFiber,
+              currentFirstChild,
+              newChild,
+              lanes,
+            ),
           );
-          coerceRef(created, newChild);
-          created.return = returnFiber;
-          if (__DEV__) {
-            const prevDebugInfo = pushDebugInfo(newChild._debugInfo);
-            created._debugInfo = currentDebugInfo;
-            currentDebugInfo = prevDebugInfo;
-          }
-          return created;
+          currentDebugInfo = prevDebugInfo;
+          return firstChild;
         }
         case REACT_PORTAL_TYPE: {
           throw new Error('Not implemented yet.');
