@@ -309,6 +309,18 @@ let hookTypesUpdateIndexDev: number = -1;
 // When true, such Hooks will always be "remounted". Only used during hot reload.
 let ignorePreviousDependencies: boolean = false;
 
+function mountHookTypesDev(): void {
+  if (__DEV__) {
+    const hookName = ((currentHookNameInDev: any): HookType);
+
+    if (hookTypesDev === null) {
+      hookTypesDev = [hookName];
+    } else {
+      hookTypesDev.push(hookName);
+    }
+  }
+}
+
 function throwInvalidHookError() {
   throw new Error(
     'Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for' +
@@ -942,3 +954,798 @@ let HooksDispatcherOnRerenderInDEV: Dispatcher | null = null;
 let InvalidNestedHooksDispatcherOnMountInDEV: Dispatcher | null = null;
 let InvalidNestedHooksDispatcherOnUpdateInDEV: Dispatcher | null = null;
 let InvalidNestedHooksDispatcherOnRerenderInDEV: Dispatcher | null = null;
+
+if (__DEV__) {
+  const warnInvalidContextAccess = () => {
+    console.error(
+      'Context can only be read while React is rendering. ' +
+        'In classes, you can read it in the render method or getDerivedStateFromProps. ' +
+        'In function components, you can read it directly in the function body, but not ' +
+        'inside Hooks like useReducer() or useMemo().',
+    );
+  };
+
+  const warnInvalidHookAccess = () => {
+    console.error(
+      'Do not call Hooks inside useEffect(...), useMemo(...), or other built-in Hooks. ' +
+        'You can only call Hooks at the top level of your React function. ' +
+        'For more information, see ' +
+        'https://react.dev/link/rules-of-hooks',
+    );
+  };
+  HooksDispatcherOnMountInDEV = {
+    readContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    use,
+    useCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    useEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useImperativeHandle<T>(
+      ref: {current: T | null} | ((inst: T | null) => mixed) | null | void,
+      create: () => T,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useInsertionEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useLayoutEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useMemo<T>(create: () => T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useReducer<S, I, A>(
+      reducer: (S, A) => S,
+      initialArg: I,
+      init?: I => S,
+    ): [S, Dispatch<A>] {
+      throw new Error('Not implemented yet.');
+    },
+    useRef<T>(initialValue: T): {current: T} {
+      throw new Error('Not implemented yet.');
+    },
+    useState<S>(
+      initialState: (() => S) | S,
+    ): [S, Dispatch<BasicStateAction<S>>] {
+      currentHookNameInDev = 'useState';
+      mountHookTypesDev();
+      const prevDispatcher = ReactSharedInternals.H;
+      ReactSharedInternals.H = InvalidNestedHooksDispatcherOnMountInDEV;
+      try {
+        return mountState(initialState);
+      } finally {
+        ReactSharedInternals.H = prevDispatcher;
+      }
+    },
+    useDebugValue<T>(value: T, formatterFn: ?(value: T) => mixed): void {
+      throw new Error('Not implemented yet.');
+    },
+    useDeferredValue<T>(value: T, initialValue?: T): T {
+      throw new Error('Not implemented yet.');
+    },
+    useTransition(): [boolean, (() => void) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useSyncExternalStore<T>(
+      subscribe: (() => void) => () => void,
+      getSnapshot: () => T,
+      getServerSnapshot?: () => T,
+    ): T {
+      throw new Error('Not implemented yet.');
+    },
+    useId(): string {
+      throw new Error('Not implemented yet.');
+    },
+    useFormState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useActionState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useOptimistic<S, A>(
+      passthrough: S,
+      reducer: ?(S, A) => S,
+    ): [S, (A) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useHostTransitionStatus,
+    useMemoCache,
+    useCacheRefresh() {
+      throw new Error('Not implemented yet.');
+    },
+  };
+  if (enableUseEffectEventHook) {
+    (HooksDispatcherOnMountInDEV: Dispatcher).useEffectEvent =
+      function useEffectEvent<Args, Return, F: (...Array<Args>) => Return>(
+        callback: F,
+      ): F {
+        throw new Error('Not implemented yet.');
+      };
+  }
+
+  HooksDispatcherOnMountWithHookTypesInDEV = {
+    readContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    use,
+    useCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    useEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useImperativeHandle<T>(
+      ref: {current: T | null} | ((inst: T | null) => mixed) | null | void,
+      create: () => T,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useInsertionEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useLayoutEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useMemo<T>(create: () => T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useReducer<S, I, A>(
+      reducer: (S, A) => S,
+      initialArg: I,
+      init?: I => S,
+    ): [S, Dispatch<A>] {
+      throw new Error('Not implemented yet.');
+    },
+    useRef<T>(initialValue: T): {current: T} {
+      throw new Error('Not implemented yet.');
+    },
+    useState<S>(
+      initialState: (() => S) | S,
+    ): [S, Dispatch<BasicStateAction<S>>] {
+      throw new Error('Not implemented yet.');
+    },
+    useDebugValue<T>(value: T, formatterFn: ?(value: T) => mixed): void {
+      throw new Error('Not implemented yet.');
+    },
+    useDeferredValue<T>(value: T, initialValue?: T): T {
+      throw new Error('Not implemented yet.');
+    },
+    useTransition(): [boolean, (() => void) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useSyncExternalStore<T>(
+      subscribe: (() => void) => () => void,
+      getSnapshot: () => T,
+      getServerSnapshot?: () => T,
+    ): T {
+      throw new Error('Not implemented yet.');
+    },
+    useId(): string {
+      throw new Error('Not implemented yet.');
+    },
+    useActionState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useFormState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useOptimistic<S, A>(
+      passthrough: S,
+      reducer: ?(S, A) => S,
+    ): [S, (A) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useHostTransitionStatus,
+    useMemoCache,
+    useCacheRefresh() {
+      throw new Error('Not implemented yet.');
+    },
+  };
+  if (enableUseEffectEventHook) {
+    (HooksDispatcherOnMountWithHookTypesInDEV: Dispatcher).useEffectEvent =
+      function useEffectEvent<Args, Return, F: (...Array<Args>) => Return>(
+        callback: F,
+      ): F {
+        throw new Error('Not implemented yet.');
+      };
+  }
+
+  HooksDispatcherOnUpdateInDEV = {
+    readContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    use,
+    useCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    useEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useImperativeHandle<T>(
+      ref: {current: T | null} | ((inst: T | null) => mixed) | null | void,
+      create: () => T,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useInsertionEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useLayoutEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useMemo<T>(create: () => T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useReducer<S, I, A>(
+      reducer: (S, A) => S,
+      initialArg: I,
+      init?: I => S,
+    ): [S, Dispatch<A>] {
+      throw new Error('Not implemented yet.');
+    },
+    useRef<T>(initialValue: T): {current: T} {
+      throw new Error('Not implemented yet.');
+    },
+    useState<S>(
+      initialState: (() => S) | S,
+    ): [S, Dispatch<BasicStateAction<S>>] {
+      throw new Error('Not implemented yet.');
+    },
+    useDebugValue<T>(value: T, formatterFn: ?(value: T) => mixed): void {
+      throw new Error('Not implemented yet.');
+    },
+    useDeferredValue<T>(value: T, initialValue?: T): T {
+      throw new Error('Not implemented yet.');
+    },
+    useTransition(): [boolean, (() => void) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useSyncExternalStore<T>(
+      subscribe: (() => void) => () => void,
+      getSnapshot: () => T,
+      getServerSnapshot?: () => T,
+    ): T {
+      throw new Error('Not implemented yet.');
+    },
+    useId(): string {
+      throw new Error('Not implemented yet.');
+    },
+    useFormState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useActionState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useOptimistic<S, A>(
+      passthrough: S,
+      reducer: ?(S, A) => S,
+    ): [S, (A) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useHostTransitionStatus,
+    useMemoCache,
+    useCacheRefresh() {
+      throw new Error('Not implemented yet.');
+    },
+  };
+  if (enableUseEffectEventHook) {
+    (HooksDispatcherOnUpdateInDEV: Dispatcher).useEffectEvent =
+      function useEffectEvent<Args, Return, F: (...Array<Args>) => Return>(
+        callback: F,
+      ): F {
+        throw new Error('Not implemented yet.');
+      };
+  }
+
+  HooksDispatcherOnRerenderInDEV = {
+    readContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    use,
+    useCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    useEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useImperativeHandle<T>(
+      ref: {current: T | null} | ((inst: T | null) => mixed) | null | void,
+      create: () => T,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useInsertionEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useLayoutEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useMemo<T>(create: () => T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useReducer<S, I, A>(
+      reducer: (S, A) => S,
+      initialArg: I,
+      init?: I => S,
+    ): [S, Dispatch<A>] {
+      throw new Error('Not implemented yet.');
+    },
+    useRef<T>(initialValue: T): {current: T} {
+      throw new Error('Not implemented yet.');
+    },
+    useState<S>(
+      initialState: (() => S) | S,
+    ): [S, Dispatch<BasicStateAction<S>>] {
+      throw new Error('Not implemented yet.');
+    },
+    useDebugValue<T>(value: T, formatterFn: ?(value: T) => mixed): void {
+      throw new Error('Not implemented yet.');
+    },
+    useDeferredValue<T>(value: T, initialValue?: T): T {
+      throw new Error('Not implemented yet.');
+    },
+    useTransition(): [boolean, (() => void) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useSyncExternalStore<T>(
+      subscribe: (() => void) => () => void,
+      getSnapshot: () => T,
+      getServerSnapshot?: () => T,
+    ): T {
+      throw new Error('Not implemented yet.');
+    },
+    useId(): string {
+      throw new Error('Not implemented yet.');
+    },
+    useFormState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useActionState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useOptimistic<S, A>(
+      passthrough: S,
+      reducer: ?(S, A) => S,
+    ): [S, (A) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useHostTransitionStatus,
+    useMemoCache,
+    useCacheRefresh() {
+      throw new Error('Not implemented yet.');
+    },
+  };
+  if (enableUseEffectEventHook) {
+    (HooksDispatcherOnRerenderInDEV: Dispatcher).useEffectEvent =
+      function useEffectEvent<Args, Return, F: (...Array<Args>) => Return>(
+        callback: F,
+      ): F {
+        throw new Error('Not implemented yet.');
+      };
+  }
+
+  InvalidNestedHooksDispatcherOnMountInDEV = {
+    readContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    use<T>(usable: Usable<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    useCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    useEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useImperativeHandle<T>(
+      ref: {current: T | null} | ((inst: T | null) => mixed) | null | void,
+      create: () => T,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useInsertionEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useLayoutEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useMemo<T>(create: () => T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useReducer<S, I, A>(
+      reducer: (S, A) => S,
+      initialArg: I,
+      init?: I => S,
+    ): [S, Dispatch<A>] {
+      throw new Error('Not implemented yet.');
+    },
+    useRef<T>(initialValue: T): {current: T} {
+      throw new Error('Not implemented yet.');
+    },
+    useState<S>(
+      initialState: (() => S) | S,
+    ): [S, Dispatch<BasicStateAction<S>>] {
+      throw new Error('Not implemented yet.');
+    },
+    useDebugValue<T>(value: T, formatterFn: ?(value: T) => mixed): void {
+      throw new Error('Not implemented yet.');
+    },
+    useDeferredValue<T>(value: T, initialValue?: T): T {
+      throw new Error('Not implemented yet.');
+    },
+    useTransition(): [boolean, (() => void) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useSyncExternalStore<T>(
+      subscribe: (() => void) => () => void,
+      getSnapshot: () => T,
+      getServerSnapshot?: () => T,
+    ): T {
+      throw new Error('Not implemented yet.');
+    },
+    useId(): string {
+      throw new Error('Not implemented yet.');
+    },
+    useFormState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useActionState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useOptimistic<S, A>(
+      passthrough: S,
+      reducer: ?(S, A) => S,
+    ): [S, (A) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useMemoCache(size: number): Array<any> {
+      throw new Error('Not implemented yet.');
+    },
+    useHostTransitionStatus,
+    useCacheRefresh() {
+      throw new Error('Not implemented yet.');
+    },
+  };
+  if (enableUseEffectEventHook) {
+    (InvalidNestedHooksDispatcherOnMountInDEV: Dispatcher).useEffectEvent =
+      function useEffectEvent<Args, Return, F: (...Array<Args>) => Return>(
+        callback: F,
+      ): F {
+        throw new Error('Not implemented yet.');
+      };
+  }
+
+  InvalidNestedHooksDispatcherOnUpdateInDEV = {
+    readContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    use<T>(usable: Usable<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    useCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    useEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useImperativeHandle<T>(
+      ref: {current: T | null} | ((inst: T | null) => mixed) | null | void,
+      create: () => T,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useInsertionEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useLayoutEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useMemo<T>(create: () => T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useReducer<S, I, A>(
+      reducer: (S, A) => S,
+      initialArg: I,
+      init?: I => S,
+    ): [S, Dispatch<A>] {
+      throw new Error('Not implemented yet.');
+    },
+    useRef<T>(initialValue: T): {current: T} {
+      throw new Error('Not implemented yet.');
+    },
+    useState<S>(
+      initialState: (() => S) | S,
+    ): [S, Dispatch<BasicStateAction<S>>] {
+      throw new Error('Not implemented yet.');
+    },
+    useDebugValue<T>(value: T, formatterFn: ?(value: T) => mixed): void {
+      throw new Error('Not implemented yet.');
+    },
+    useDeferredValue<T>(value: T, initialValue?: T): T {
+      throw new Error('Not implemented yet.');
+    },
+    useTransition(): [boolean, (() => void) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useSyncExternalStore<T>(
+      subscribe: (() => void) => () => void,
+      getSnapshot: () => T,
+      getServerSnapshot?: () => T,
+    ): T {
+      throw new Error('Not implemented yet.');
+    },
+    useId(): string {
+      throw new Error('Not implemented yet.');
+    },
+    useFormState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useActionState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useOptimistic<S, A>(
+      passthrough: S,
+      reducer: ?(S, A) => S,
+    ): [S, (A) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useMemoCache(size: number): Array<any> {
+      throw new Error('Not implemented yet.');
+    },
+    useHostTransitionStatus,
+    useCacheRefresh() {
+      throw new Error('Not implemented yet.');
+    },
+  };
+  if (enableUseEffectEventHook) {
+    (InvalidNestedHooksDispatcherOnUpdateInDEV: Dispatcher).useEffectEvent =
+      function useEffectEvent<Args, Return, F: (...Array<Args>) => Return>(
+        callback: F,
+      ): F {
+        throw new Error('Not implemented yet.');
+      };
+  }
+
+  InvalidNestedHooksDispatcherOnRerenderInDEV = {
+    readContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    use<T>(usable: Usable<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    useCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useContext<T>(context: ReactContext<T>): T {
+      throw new Error('Not implemented yet.');
+    },
+    useEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useImperativeHandle<T>(
+      ref: {current: T | null} | ((inst: T | null) => mixed) | null | void,
+      create: () => T,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useInsertionEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useLayoutEffect(
+      create: () => (() => void) | void,
+      deps: Array<mixed> | void | null,
+    ): void {
+      throw new Error('Not implemented yet.');
+    },
+    useMemo<T>(create: () => T, deps: Array<mixed> | void | null): T {
+      throw new Error('Not implemented yet.');
+    },
+    useReducer<S, I, A>(
+      reducer: (S, A) => S,
+      initialArg: I,
+      init?: I => S,
+    ): [S, Dispatch<A>] {
+      throw new Error('Not implemented yet.');
+    },
+    useRef<T>(initialValue: T): {current: T} {
+      throw new Error('Not implemented yet.');
+    },
+    useState<S>(
+      initialState: (() => S) | S,
+    ): [S, Dispatch<BasicStateAction<S>>] {
+      throw new Error('Not implemented yet.');
+    },
+    useDebugValue<T>(value: T, formatterFn: ?(value: T) => mixed): void {
+      throw new Error('Not implemented yet.');
+    },
+    useDeferredValue<T>(value: T, initialValue?: T): T {
+      throw new Error('Not implemented yet.');
+    },
+    useTransition(): [boolean, (() => void) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useSyncExternalStore<T>(
+      subscribe: (() => void) => () => void,
+      getSnapshot: () => T,
+      getServerSnapshot?: () => T,
+    ): T {
+      throw new Error('Not implemented yet.');
+    },
+    useId(): string {
+      throw new Error('Not implemented yet.');
+    },
+    useFormState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useActionState<S, P>(
+      action: (Awaited<S>, P) => S,
+      initialState: Awaited<S>,
+      permalink?: string,
+    ): [Awaited<S>, (P) => void, boolean] {
+      throw new Error('Not implemented yet.');
+    },
+    useOptimistic<S, A>(
+      passthrough: S,
+      reducer: ?(S, A) => S,
+    ): [S, (A) => void] {
+      throw new Error('Not implemented yet.');
+    },
+    useMemoCache(size: number): Array<any> {
+      throw new Error('Not implemented yet.');
+    },
+    useHostTransitionStatus,
+    useCacheRefresh() {
+      throw new Error('Not implemented yet.');
+    },
+  };
+  if (enableUseEffectEventHook) {
+    (InvalidNestedHooksDispatcherOnRerenderInDEV: Dispatcher).useEffectEvent =
+      function useEffectEvent<Args, Return, F: (...Array<Args>) => Return>(
+        callback: F,
+      ): F {
+        throw new Error('Not implemented yet.');
+      };
+  }
+}
