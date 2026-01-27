@@ -8,4 +8,4 @@ import * as ReactDOMClient from 'react-dom/client';
 var container = document.getElementById('container');
 var root = ReactDOMClient.createRoot(container);
 // TODO 这里的例子最好要能换成 jsx 的原生写法
-root.render(React.createElement('h1', null, 'Hello World!'));
+root.render(<h1>Hello World!</h1>);
