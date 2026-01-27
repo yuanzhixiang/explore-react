@@ -590,7 +590,66 @@ function commitMutationEffectsOnFiber(
       // Fall through
     }
     case HostComponent: {
-      throw new Error('Not implemented yet.');
+      // We've hit a host component, so it's no longer a direct parent.
+      const prevOffscreenDirectParentIsHidden = offscreenDirectParentIsHidden;
+      offscreenDirectParentIsHidden = false;
+
+      recursivelyTraverseMutationEffects(root, finishedWork, lanes);
+
+      offscreenDirectParentIsHidden = prevOffscreenDirectParentIsHidden;
+
+      commitReconciliationEffects(finishedWork, lanes);
+
+      if (flags & Ref) {
+        if (!offscreenSubtreeWasHidden && current !== null) {
+          safelyDetachRef(current, current.return);
+        }
+      }
+      if (supportsMutation) {
+        // TODO: ContentReset gets cleared by the children during the commit
+        // phase. This is a refactor hazard because it means we must read
+        // flags the flags after `commitReconciliationEffects` has already run;
+        // the order matters. We should refactor so that ContentReset does not
+        // rely on mutating the flag during commit. Like by setting a flag
+        // during the render phase instead.
+        if (finishedWork.flags & ContentReset) {
+          // commitHostResetTextContent(finishedWork);
+          throw new Error('Not implemented yet.');
+        }
+
+        if (flags & Update) {
+          const instance: Instance = finishedWork.stateNode;
+          if (instance != null) {
+            // Commit the work prepared earlier.
+            // For hydration we reuse the update path but we treat the oldProps
+            // as the newProps. The updatePayload will contain the real change in
+            // this case.
+            const newProps = finishedWork.memoizedProps;
+            const oldProps =
+              current !== null ? current.memoizedProps : newProps;
+            // commitHostUpdate(finishedWork, newProps, oldProps);
+            throw new Error('Not implemented yet.');
+          }
+        }
+
+        if (flags & FormReset) {
+          needsFormReset = true;
+          if (__DEV__) {
+            if (finishedWork.type !== 'form') {
+              // Paranoid coding. In case we accidentally start using the
+              // FormReset bit for something else.
+              console.error(
+                'Unexpected host component type. Expected a form. This is a ' +
+                  'bug in React.',
+                1,
+              );
+            }
+          }
+        }
+      } else {
+        throw new Error('Not implemented yet.');
+      }
+      break;
     }
     case HostText: {
       throw new Error('Not implemented yet.');

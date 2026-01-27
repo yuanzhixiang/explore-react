@@ -82,7 +82,7 @@ import {
   // diffHydratedProperties,
   // getPropsFromElement,
   // diffHydratedText,
-  // trapClickOnNonInteractiveElement,
+  trapClickOnNonInteractiveElement,
 } from './ReactDOMComponent';
 // import {hydrateInput} from './ReactDOMInput';
 // import {hydrateTextarea} from './ReactDOMTextarea';
@@ -409,6 +409,12 @@ let schedulerEvent: void | Event = undefined;
 export function trackSchedulerEvent(): void {
   schedulerEvent = window.event;
 }
+
+const supportsMoveBefore =
+  // $FlowFixMe[prop-missing]: We're doing the feature detection here.
+  enableMoveBefore &&
+  typeof window !== 'undefined' &&
+  typeof window.Element.prototype.moveBefore === 'function';
 
 export function getRootHostContext(
   rootContainerInstance: Container,
@@ -960,4 +966,58 @@ export function getHoistableRoot(container: Container): HoistableRoot {
       ? // $FlowFixMe[incompatible-cast] We've constrained this to be a Document which satisfies the return type
         (container: Document)
       : container.ownerDocument;
+}
+
+export function appendChildToContainer(
+  container: Container,
+  child: Instance | TextInstance,
+): void {
+  if (__DEV__) {
+    // warnForReactChildrenConflict(container);
+    console.log('跳过 warnForReactChildrenConflict 检查');
+  }
+
+  let parentNode: DocumentFragment | Element;
+  if (container.nodeType === DOCUMENT_NODE) {
+    parentNode = (container: any).body;
+  } else if (
+    !disableCommentsAsDOMContainers &&
+    container.nodeType === COMMENT_NODE
+  ) {
+    parentNode = (container.parentNode: any);
+    if (supportsMoveBefore && child.parentNode !== null) {
+      // $FlowFixMe[prop-missing]: We've checked this with supportsMoveBefore.
+      parentNode.moveBefore(child, container);
+    } else {
+      parentNode.insertBefore(child, container);
+    }
+    return;
+  } else if (container.nodeName === 'HTML') {
+    parentNode = (container.ownerDocument.body: any);
+  } else {
+    parentNode = (container: any);
+  }
+  if (supportsMoveBefore && child.parentNode !== null) {
+    // $FlowFixMe[prop-missing]: We've checked this with supportsMoveBefore.
+    parentNode.moveBefore(child, null);
+  } else {
+    parentNode.appendChild(child);
+  }
+
+  // This container might be used for a portal.
+  // If something inside a portal is clicked, that click should bubble
+  // through the React tree. However, on Mobile Safari the click would
+  // never bubble through the *DOM* tree unless an ancestor with onclick
+  // event exists. So we wouldn't see it and dispatch it.
+  // This is why we ensure that non React root containers have inline onclick
+  // defined.
+  // https://github.com/facebook/react/issues/11918
+  const reactRootContainer = container._reactRootContainer;
+  if (
+    (reactRootContainer === null || reactRootContainer === undefined) &&
+    parentNode.onclick === null
+  ) {
+    // TODO: This cast may not be sound for SVG, MathML or custom elements.
+    trapClickOnNonInteractiveElement(((parentNode: any): HTMLElement));
+  }
 }

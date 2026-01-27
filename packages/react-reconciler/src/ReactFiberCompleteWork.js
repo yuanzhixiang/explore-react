@@ -537,13 +537,9 @@ function bubbleProperties(completedWork: Fiber) {
           ),
         );
 
-        // "Static" flags share the lifetime of the fiber/hook they belong to,
-        // so we should bubble those up even during a bailout. All the other
-        // flags have a lifetime only of a single render + commit, so we should
-        // ignore them.
-        // 这里只收集静态 flags（用 & StaticMask 过滤）
-        subtreeFlags |= child.subtreeFlags & StaticMask;
-        subtreeFlags |= child.flags & StaticMask;
+        // 收集子树的 flaggs
+        subtreeFlags |= child.subtreeFlags;
+        subtreeFlags |= child.flags;
 
         // 这是一个代码坏味道（code smell），因为它假设 commit 阶段永远不会和 render 阶段并发
         // Update the return pointer so the tree is consistent. This is a code

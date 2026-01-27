@@ -368,7 +368,7 @@ import {
   // markRenderStopped,
   onCommitRoot as onCommitRootDevTools,
   // onPostCommitRoot as onPostCommitRootDevTools,
-  // setIsStrictModeForDevtools,
+  setIsStrictModeForDevtools,
 } from './ReactFiberDevToolsHook';
 import {onCommitRoot as onCommitRootTestSelector} from './ReactTestSelectors';
 import {releaseCache} from './ReactFiberCacheComponent';
@@ -1301,13 +1301,38 @@ function doubleInvokeEffectsInDEVIfNecessary(
   // First case: the fiber **is not** of type OffscreenComponent. No
   // special rules apply to double invoking effects.
   if (fiber.tag !== OffscreenComponent) {
-    throw new Error('Not implemented yet.');
+    if (fiber.flags & PlacementDEV) {
+      if (isInStrictMode) {
+        runWithFiberInDEV(fiber, doubleInvokeEffectsOnFiber, root, fiber);
+      }
+    } else {
+      recursivelyTraverseAndDoubleInvokeEffectsInDEV(
+        root,
+        fiber,
+        isInStrictMode,
+      );
+    }
+    return;
   }
 
   // Second case: the fiber **is** of type OffscreenComponent.
   // This branch contains cases specific to Offscreen.
   if (fiber.memoizedState === null) {
     throw new Error('Not implemented yet.');
+  }
+}
+
+// Unconditionally disconnects and connects passive and layout effects.
+function doubleInvokeEffectsOnFiber(root: FiberRoot, fiber: Fiber) {
+  setIsStrictModeForDevtools(true);
+  try {
+    // disappearLayoutEffects(fiber);
+    // disconnectPassiveEffect(fiber);
+    // reappearLayoutEffects(root, fiber.alternate, fiber, false);
+    // reconnectPassiveEffects(root, fiber, NoLanes, null, false, 0);
+    throw new Error('Not implemented yet.');
+  } finally {
+    setIsStrictModeForDevtools(false);
   }
 }
 
@@ -2030,4 +2055,13 @@ export function queueRecoverableErrors(errors: Array<CapturedValue<mixed>>) {
       errors,
     );
   }
+}
+
+export function captureCommitPhaseError(
+  sourceFiber: Fiber,
+  nearestMountedAncestor: Fiber | null,
+  error: mixed,
+) {
+  console.error('captureCommitPhaseError', error);
+  throw new Error('Not implemented yet.');
 }
