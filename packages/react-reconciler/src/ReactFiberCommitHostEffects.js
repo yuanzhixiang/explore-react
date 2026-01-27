@@ -264,7 +264,22 @@ function insertOrAppendPlacementNodeIntoContainer(
 
   const child = node.child;
   if (child !== null) {
-    throw new Error('Not implemented yet.');
+    insertOrAppendPlacementNodeIntoContainer(
+      child,
+      before,
+      parent,
+      parentFragmentInstances,
+    );
+    let sibling = child.sibling;
+    while (sibling !== null) {
+      insertOrAppendPlacementNodeIntoContainer(
+        sibling,
+        before,
+        parent,
+        parentFragmentInstances,
+      );
+      sibling = sibling.sibling;
+    }
   }
 }
 

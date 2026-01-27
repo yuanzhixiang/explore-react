@@ -47,11 +47,11 @@ import type {UpdateQueue} from './ReactFiberClassUpdateQueue';
 import type {RootState} from './ReactFiberRoot';
 import type {TracingMarkerInstance} from './ReactFiberTracingMarkerComponent';
 
-// import {
-//   markComponentRenderStarted,
-//   markComponentRenderStopped,
-//   setIsStrictModeForDevtools,
-// } from './ReactFiberDevToolsHook';
+import {
+  markComponentRenderStarted,
+  markComponentRenderStopped,
+  //   setIsStrictModeForDevtools,
+} from './ReactFiberDevToolsHook';
 import {
   FunctionComponent,
   ClassComponent,
@@ -209,23 +209,23 @@ import {
 //   reuseHiddenContextOnStack,
 // } from './ReactFiberHiddenContext';
 // import {findFirstSuspended} from './ReactFiberSuspenseComponent';
-// import {
-//   pushProvider,
-//   propagateContextChange,
-//   lazilyPropagateParentContextChanges,
-//   propagateParentContextChangesToDeferredTree,
-//   checkIfContextChanged,
-//   readContext,
-//   prepareToReadContext,
-//   scheduleContextWorkOnParentPath,
-// } from './ReactFiberNewContext';
-// import {
-//   renderWithHooks,
-//   checkDidRenderIdHook,
-//   bailoutHooks,
-//   replaySuspendedComponentWithHooks,
-//   renderTransitionAwareHostComponentWithHooks,
-// } from './ReactFiberHooks';
+import {
+  //   pushProvider,
+  //   propagateContextChange,
+  //   lazilyPropagateParentContextChanges,
+  //   propagateParentContextChangesToDeferredTree,
+  //   checkIfContextChanged,
+  //   readContext,
+  prepareToReadContext,
+  //   scheduleContextWorkOnParentPath,
+} from './ReactFiberNewContext';
+import {
+  renderWithHooks,
+  checkDidRenderIdHook,
+  //   bailoutHooks,
+  //   replaySuspendedComponentWithHooks,
+  //   renderTransitionAwareHostComponentWithHooks,
+} from './ReactFiberHooks';
 // import {stopProfilerTimerIfRunning} from './ReactProfilerTimer';
 import {
   // getMaskedContext,
@@ -547,7 +547,14 @@ function beginWork(
       throw new Error('Not implemented yet.');
     }
     case FunctionComponent: {
-      throw new Error('Not implemented yet.');
+      const Component = workInProgress.type;
+      return updateFunctionComponent(
+        current,
+        workInProgress,
+        Component,
+        workInProgress.pendingProps,
+        renderLanes,
+      );
     }
     case ClassComponent: {
       throw new Error('Not implemented yet.');
@@ -628,6 +635,59 @@ function beginWork(
     `Unknown unit of work tag (${workInProgress.tag}). This error is likely caused by a bug in ` +
       'React. Please file an issue.',
   );
+}
+
+function updateFunctionComponent(
+  current: null | Fiber,
+  workInProgress: Fiber,
+  Component: any,
+  nextProps: any,
+  renderLanes: Lanes,
+) {
+  if (__DEV__) {
+    console.log('跳过 updateFunctionComponent dev 的代码');
+  }
+
+  let context;
+  if (!disableLegacyContext && !disableLegacyContextForFunctionComponents) {
+    throw new Error('Not implemented yet.');
+  }
+
+  let nextChildren;
+  let hasId;
+  prepareToReadContext(workInProgress, renderLanes);
+  if (enableSchedulingProfiler) {
+    markComponentRenderStarted(workInProgress);
+  }
+  if (__DEV__) {
+    nextChildren = renderWithHooks(
+      current,
+      workInProgress,
+      Component,
+      nextProps,
+      context,
+      renderLanes,
+    );
+    hasId = checkDidRenderIdHook();
+  } else {
+    throw new Error('Not implemented yet.');
+  }
+  if (enableSchedulingProfiler) {
+    markComponentRenderStopped();
+  }
+
+  if (current !== null && !didReceiveUpdate) {
+    throw new Error('Not implemented yet.');
+  }
+
+  if (getIsHydrating() && hasId) {
+    throw new Error('Not implemented yet.');
+  }
+
+  // React DevTools reads this flag.
+  workInProgress.flags |= PerformedWork;
+  reconcileChildren(current, workInProgress, nextChildren, renderLanes);
+  return workInProgress.child;
 }
 
 function updateHostComponent(

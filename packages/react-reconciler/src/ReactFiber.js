@@ -79,11 +79,11 @@ import {
 } from './ReactWorkTags';
 // import {getComponentNameFromOwner} from 'react-reconciler/src/getComponentNameFromFiber';
 import {isDevToolsPresent} from './ReactFiberDevToolsHook';
-// import {
-//   resolveClassForHotReloading,
-//   resolveFunctionForHotReloading,
-//   resolveForwardRefForHotReloading,
-// } from './ReactFiberHotReloading';
+import {
+  //   resolveClassForHotReloading,
+  resolveFunctionForHotReloading,
+  //   resolveForwardRefForHotReloading,
+} from './ReactFiberHotReloading';
 import {NoLanes} from './ReactFiberLane';
 import {
   NoMode,
@@ -431,6 +431,11 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   return workInProgress;
 }
 
+function shouldConstruct(Component: Function) {
+  const prototype = Component.prototype;
+  return !!(prototype && prototype.isReactComponent);
+}
+
 // TODO: Get rid of this helper. Only createFiberFromElement should exist.
 export function createFiberFromTypeAndProps(
   type: any, // React$ElementType
@@ -445,7 +450,13 @@ export function createFiberFromTypeAndProps(
   let resolvedType = type;
 
   if (typeof type === 'function') {
-    throw new Error('Not implemented yet.');
+    if (shouldConstruct(type)) {
+      throw new Error('Not implemented yet.');
+    } else {
+      if (__DEV__) {
+        resolvedType = resolveFunctionForHotReloading(resolvedType);
+      }
+    }
   } else if (typeof type === 'string') {
     if (supportsResources && supportsSingletons) {
       const hostContext = getHostContext();

@@ -280,7 +280,8 @@ function completeWork(
     case Profiler:
     case ContextConsumer:
     case MemoComponent:
-      throw new Error('Not implemented yet.');
+      bubbleProperties(workInProgress);
+      return null;
     case ClassComponent: {
       throw new Error('Not implemented yet.');
     }

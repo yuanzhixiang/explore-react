@@ -165,3 +165,17 @@ export function resetContextDependencies(): void {
     isDisallowedContextReadInDEV = false;
   }
 }
+
+export function prepareToReadContext(
+  workInProgress: Fiber,
+  renderLanes: Lanes,
+): void {
+  currentlyRenderingFiber = workInProgress;
+  lastContextDependency = null;
+
+  const dependencies = workInProgress.dependencies;
+  if (dependencies !== null) {
+    // Reset the work-in-progress list
+    dependencies.firstContext = null;
+  }
+}

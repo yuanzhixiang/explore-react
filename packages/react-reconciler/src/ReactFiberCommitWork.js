@@ -574,8 +574,25 @@ function commitMutationEffectsOnFiber(
     case ForwardRef:
     case MemoComponent:
     case SimpleMemoComponent: {
-      // break;
-      throw new Error('Not implemented yet.');
+      recursivelyTraverseMutationEffects(root, finishedWork, lanes);
+      commitReconciliationEffects(finishedWork, lanes);
+
+      if (flags & Update) {
+        // commitHookEffectListUnmount(
+        //   HookInsertion | HookHasEffect,
+        //   finishedWork,
+        //   finishedWork.return,
+        // );
+        // // TODO: Use a commitHookInsertionUnmountEffects wrapper to record timings.
+        // commitHookEffectListMount(HookInsertion | HookHasEffect, finishedWork);
+        // commitHookLayoutUnmountEffects(
+        //   finishedWork,
+        //   finishedWork.return,
+        //   HookLayout | HookHasEffect,
+        // );
+        throw new Error('Not implemented yet.');
+      }
+      break;
     }
     case ClassComponent: {
       // break;

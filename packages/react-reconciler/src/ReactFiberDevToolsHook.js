@@ -154,3 +154,25 @@ export function onCommitRoot(root: FiberRoot, eventPriority: EventPriority) {
     }
   }
 }
+
+export function markComponentRenderStarted(fiber: Fiber): void {
+  if (enableSchedulingProfiler) {
+    if (
+      injectedProfilingHooks !== null &&
+      typeof injectedProfilingHooks.markComponentRenderStarted === 'function'
+    ) {
+      injectedProfilingHooks.markComponentRenderStarted(fiber);
+    }
+  }
+}
+
+export function markComponentRenderStopped(): void {
+  if (enableSchedulingProfiler) {
+    if (
+      injectedProfilingHooks !== null &&
+      typeof injectedProfilingHooks.markComponentRenderStopped === 'function'
+    ) {
+      injectedProfilingHooks.markComponentRenderStopped();
+    }
+  }
+}

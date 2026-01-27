@@ -71,3 +71,9 @@ function getCurrentFiberStackInDev(): string {
   }
   return '';
 }
+
+export function setIsRendering(rendering: boolean) {
+  if (__DEV__) {
+    isRendering = rendering;
+  }
+}
