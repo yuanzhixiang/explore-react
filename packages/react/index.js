@@ -67,7 +67,7 @@ export {
   // useSyncExternalStore,
   // useReducer,
   // useRef,
-  // useState,
+  useState,
   // useTransition,
   // useActionState,
   // version,

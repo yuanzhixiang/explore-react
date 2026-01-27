@@ -35,29 +35,29 @@ import {
 // import {forwardRef} from './ReactForwardRef';
 // import {memo} from './ReactMemo';
 // import {cache, cacheSignal} from './ReactCacheClient';
-// import {
-//   getCacheForType,
-//   useCallback,
-//   useContext,
-//   useEffect,
-//   useEffectEvent,
-//   useImperativeHandle,
-//   useDebugValue,
-//   useInsertionEffect,
-//   useLayoutEffect,
-//   useMemo,
-//   useSyncExternalStore,
-//   useReducer,
-//   useRef,
-//   useState,
-//   useTransition,
-//   useDeferredValue,
-//   useId,
-//   useCacheRefresh,
-//   use,
-//   useOptimistic,
-//   useActionState,
-// } from './ReactHooks';
+import {
+  //   getCacheForType,
+  //   useCallback,
+  //   useContext,
+  //   useEffect,
+  //   useEffectEvent,
+  //   useImperativeHandle,
+  //   useDebugValue,
+  //   useInsertionEffect,
+  //   useLayoutEffect,
+  //   useMemo,
+  //   useSyncExternalStore,
+  //   useReducer,
+  //   useRef,
+  useState,
+  //   useTransition,
+  //   useDeferredValue,
+  //   useId,
+  //   useCacheRefresh,
+  //   use,
+  //   useOptimistic,
+  //   useActionState,
+} from './ReactHooks';
 import ReactSharedInternals from './ReactSharedInternalsClient';
 // import {startTransition, startGestureTransition} from './ReactStartTransition';
 // import {addTransitionType} from './ReactTransitionType';
@@ -90,7 +90,7 @@ export {
   // useSyncExternalStore,
   // useReducer,
   // useRef,
-  // useState,
+  useState,
   // REACT_FRAGMENT_TYPE as Fragment,
   // REACT_PROFILER_TYPE as Profiler,
   // REACT_STRICT_MODE_TYPE as StrictMode,
