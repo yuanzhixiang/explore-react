@@ -6,7 +6,8 @@
       "request": "launch",
       "type": "chrome",
       "url": "http://localhost:5173/",
-      "webRoot": "${workspaceFolder}"
+      // 这里要改成 demo 项目路径，否则在 demo 项目里面打断点不生效
+      "webRoot": "${workspaceFolder}/fixtures/packaging/webpack/dev"
     },
     {
       "type": "node",
