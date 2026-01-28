@@ -36,6 +36,9 @@ const callComponent = {
       const result = Component(props, secondArg);
       // 返回渲染结果
       return result;
+    } catch (error) {
+      console.error('Error occurred during rendering: ', error);
+      throw error;
     } finally {
       // 恢复之前的渲染状态
       setIsRendering(wasRendering);

@@ -287,7 +287,15 @@ function setProp(
       throw new Error('Not implemented yet.');
     }
     case 'onClick': {
-      throw new Error('Not implemented yet.');
+      // TODO: This cast may not be sound for SVG, MathML or custom elements.
+      if (value != null) {
+        if (__DEV__ && typeof value !== 'function') {
+          // warnForInvalidEventListener(key, value);
+          throw new Error('Not implemented yet.');
+        }
+        trapClickOnNonInteractiveElement(((domElement: any): HTMLElement));
+      }
+      return;
     }
     case 'onScroll': {
       throw new Error('Not implemented yet.');

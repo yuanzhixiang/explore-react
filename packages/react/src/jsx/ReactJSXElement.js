@@ -3,11 +3,13 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @flowx
  */
 
 import getComponentNameFromType from 'shared/getComponentNameFromType';
 import ReactSharedInternals from 'shared/ReactSharedInternals';
-// import hasOwnProperty from 'shared/hasOwnProperty';
+import hasOwnProperty from 'shared/hasOwnProperty';
 // import assign from 'shared/assign';
 import {
   REACT_ELEMENT_TYPE,
@@ -28,11 +30,39 @@ const createTask =
       console.createTask
     : () => null;
 
+const createFakeCallStack = {
+  react_stack_bottom_frame: function (callStackForError) {
+    return callStackForError();
+  },
+};
+
+let specialPropKeyWarningShown;
 let didWarnAboutElementRef;
+let didWarnAboutOldJSXRuntime;
+let unknownOwnerDebugStack;
 let unknownOwnerDebugTask;
+
 if (__DEV__) {
   didWarnAboutElementRef = {};
+
+  // We use this technique to trick minifiers to preserve the function name.
+  unknownOwnerDebugStack = createFakeCallStack.react_stack_bottom_frame.bind(
+    createFakeCallStack,
+    UnknownOwner,
+  )();
   unknownOwnerDebugTask = createTask(getTaskName(UnknownOwner));
+}
+
+function hasValidKey(config) {
+  if (__DEV__) {
+    if (hasOwnProperty.call(config, 'key')) {
+      const getter = Object.getOwnPropertyDescriptor(config, 'key').get;
+      if (getter && getter.isReactWarning) {
+        return false;
+      }
+    }
+  }
+  return config.key !== undefined;
 }
 
 function getTaskName(type) {
@@ -112,7 +142,46 @@ export function createElement(type, config, children) {
   let key = null;
 
   if (config != null) {
-    throw new Error('Not implemented');
+    if (__DEV__) {
+      if (
+        !didWarnAboutOldJSXRuntime &&
+        '__self' in config &&
+        // Do not assume this is the result of an oudated JSX transform if key
+        // is present, because the modern JSX transform sometimes outputs
+        // createElement to preserve precedence between a static key and a
+        // spread key. To avoid false positive warnings, we never warn if
+        // there's a key.
+        !('key' in config)
+      ) {
+        didWarnAboutOldJSXRuntime = true;
+        console.warn(
+          'Your app (or one of its dependencies) is using an outdated JSX ' +
+            'transform. Update to the modern JSX transform for ' +
+            'faster performance: https://react.dev/link/new-jsx-transform',
+        );
+      }
+    }
+
+    if (hasValidKey(config)) {
+      throw new Error('Not implemented');
+    }
+
+    // Remaining properties are added to a new props object
+    for (propName in config) {
+      if (
+        hasOwnProperty.call(config, propName) &&
+        // Skip over reserved prop names
+        propName !== 'key' &&
+        // Even though we don't use these anymore in the runtime, we don't want
+        // them to appear as props, so in createElement we filter them out.
+        // We don't have to do this in the jsx() runtime because the jsx()
+        // transform never passed these as props; it used separate arguments.
+        propName !== '__self' &&
+        propName !== '__source'
+      ) {
+        props[propName] = config[propName];
+      }
+    }
   }
 
   // Children can be more than one argument, and those are transferred onto

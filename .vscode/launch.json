@@ -8,12 +8,12 @@
       "url": "http://localhost:5173/",
       // webRoot 用仓库根，配合 sourceMapPathOverrides 兼容 demo + 源码断点
       "webRoot": "${workspaceFolder}",
-      "sourceMapPathOverrides": {
-        // 保证 packages 下面的源码能进入断点
-        "/@fs/*": "/*",
-        // 保证 fixtures/packaging/webpack/dev 下面的源码能进入断点
-        "*": "${workspaceFolder}/fixtures/packaging/webpack/dev/*"
-      }
+      // "sourceMapPathOverrides": {
+      //   // 保证 packages 下面的源码能进入断点
+      //   "/@fs/*": "/*",
+      //   // 保证 fixtures/packaging/webpack/dev 下面的源码能进入断点
+      //   "*": "${workspaceFolder}/fixtures/packaging/webpack/dev/*"
+      // }
     },
     {
       "type": "node",
@@ -24,7 +24,10 @@
       "preLaunchTask": "pnpm: build",
       "sourceMaps": true,
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
-    }
-  ]
+      "skipFiles": [
+        "<node_internals>/**",
+        "${workspaceFolder}/node_modules/**",
+      ],
+    },
+  ],
 }

@@ -116,3 +116,27 @@ export function updateFiberProps(
   // 直接在 DOM 节点上挂属性
   (node: any)[internalPropsKey] = props;
 }
+
+// Given a DOM node, return the closest HostComponent or HostText fiber ancestor.
+// If the target node is part of a hydrated or not yet rendered subtree, then
+// this may also return a SuspenseComponent, ActivityComponent or HostRoot to
+// indicate that.
+// Conceptually the HostRoot fiber is a child of the Container node. So if you
+// pass the Container node as the targetNode, you will not actually get the
+// HostRoot back. To get to the HostRoot, you need to pass a child of it.
+// The same thing applies to Suspense and Activity boundaries.
+export function getClosestInstanceFromNode(targetNode: Node): null | Fiber {
+  let targetInst: void | Fiber;
+  if (enableInternalInstanceMap) {
+    targetInst = internalInstanceMap.get(((targetNode: any): InstanceUnion));
+  } else {
+    targetInst = (targetNode: any)[internalInstanceKey];
+  }
+
+  if (targetInst) {
+    // Don't return HostRoot, SuspenseComponent or ActivityComponent here.
+    return targetInst;
+  }
+
+  throw new Error('Not implemented');
+}

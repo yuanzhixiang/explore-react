@@ -36,17 +36,17 @@ import {
 } from 'react-reconciler/src/ReactWorkTags';
 import {type EventSystemFlags, IS_CAPTURE_PHASE} from './EventSystemFlags';
 
-// import getEventTarget from './getEventTarget';
-// import {
-//   getInstanceFromNode,
-//   getClosestInstanceFromNode,
-// } from '../client/ReactDOMComponentTree';
+import getEventTarget from './getEventTarget';
+import {
+  //   getInstanceFromNode,
+  getClosestInstanceFromNode,
+} from '../client/ReactDOMComponentTree';
 
 // import {dispatchEventForPluginEventSystem} from './DOMPluginEventSystem';
-// import {
-//   getCurrentUpdatePriority,
-//   setCurrentUpdatePriority,
-// } from '../client/ReactDOMUpdatePriority';
+import {
+  getCurrentUpdatePriority,
+  setCurrentUpdatePriority,
+} from '../client/ReactDOMUpdatePriority';
 
 import {
   getCurrentPriorityLevel as getCurrentSchedulerPriorityLevel,
@@ -62,7 +62,7 @@ import {
   DefaultEventPriority,
   IdleEventPriority,
 } from 'react-reconciler/src/ReactEventPriorities';
-// import ReactSharedInternals from 'shared/ReactSharedInternals';
+import ReactSharedInternals from 'shared/ReactSharedInternals';
 // import {isRootDehydrated} from 'react-reconciler/src/ReactFiberShellHydration';
 
 // TODO: can we stop exporting these?
@@ -111,7 +111,16 @@ function dispatchDiscreteEvent(
   container: EventTarget,
   nativeEvent: AnyNativeEvent,
 ) {
-  throw new Error('Not implemented');
+  const prevTransition = ReactSharedInternals.T;
+  ReactSharedInternals.T = null;
+  const previousPriority = getCurrentUpdatePriority();
+  try {
+    setCurrentUpdatePriority(DiscreteEventPriority);
+    dispatchEvent(domEventName, eventSystemFlags, container, nativeEvent);
+  } finally {
+    setCurrentUpdatePriority(previousPriority);
+    ReactSharedInternals.T = prevTransition;
+  }
 }
 
 function dispatchContinuousEvent(
@@ -123,12 +132,57 @@ function dispatchContinuousEvent(
   throw new Error('Not implemented');
 }
 
+export function findInstanceBlockingEvent(
+  nativeEvent: AnyNativeEvent,
+): null | Container | SuspenseInstance | ActivityInstance {
+  const nativeEventTarget = getEventTarget(nativeEvent);
+  return findInstanceBlockingTarget(nativeEventTarget);
+}
+
+export let return_targetInst: null | Fiber = null;
+
+// Returns a SuspenseInstance, ActivityInstance or Container if it's blocked.
+// The return_targetInst field above is conceptually part of the return value.
+export function findInstanceBlockingTarget(
+  targetNode: Node,
+): null | Container | SuspenseInstance | ActivityInstance {
+  // TODO: Warn if _enabled is false.
+
+  return_targetInst = null;
+
+  let targetInst = getClosestInstanceFromNode(targetNode);
+
+  if (targetInst !== null) {
+    throw new Error('Not implemented');
+  }
+
+  return_targetInst = targetInst;
+  // We're not blocked on anything.
+  return null;
+}
+
 export function dispatchEvent(
   domEventName: DOMEventName,
   eventSystemFlags: EventSystemFlags,
   targetContainer: EventTarget,
   nativeEvent: AnyNativeEvent,
 ): void {
+  if (!_enabled) {
+    return;
+  }
+
+  let blockedOn = findInstanceBlockingEvent(nativeEvent);
+  if (blockedOn === null) {
+    dispatchEventForPluginEventSystem(
+      domEventName,
+      eventSystemFlags,
+      nativeEvent,
+      return_targetInst,
+      targetContainer,
+    );
+    clearIfContinuousEvent(domEventName, nativeEvent);
+    return;
+  }
   throw new Error('Not implemented');
 }
 
