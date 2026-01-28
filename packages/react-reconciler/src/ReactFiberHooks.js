@@ -122,10 +122,10 @@ import getComponentNameFromFiber from 'react-reconciler/src/getComponentNameFrom
 //   getIsHydrating,
 //   tryToClaimNextHydratableFormMarkerInstance,
 // } from './ReactFiberHydrationContext';
-// import {
-//   markStateUpdateScheduled,
-//   setIsStrictModeForDevtools,
-// } from './ReactFiberDevToolsHook';
+import {
+  //   markStateUpdateScheduled,
+  setIsStrictModeForDevtools,
+} from './ReactFiberDevToolsHook';
 import {
   startUpdateTimerByLane,
   // startHostActionTimer,
@@ -641,10 +641,91 @@ function mountRef<T>(initialValue: T): {current: T} {
   throw new Error('Not implemented yet.');
 }
 
+function dispatchSetState<S, A>(
+  fiber: Fiber,
+  queue: UpdateQueue<S, A>,
+  action: A,
+): void {
+  throw new Error('Not implemented yet.');
+}
+
 function mountState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
-  throw new Error('Not implemented yet.');
+  const hook = mountStateImpl(initialState);
+  const queue = hook.queue;
+  const dispatch: Dispatch<BasicStateAction<S>> = (dispatchSetState.bind(
+    null,
+    currentlyRenderingFiber,
+    queue,
+  ): any);
+  queue.dispatch = dispatch;
+  return [hook.memoizedState, dispatch];
+}
+
+function mountStateImpl<S>(initialState: (() => S) | S): Hook {
+  const hook = mountWorkInProgressHook();
+  if (typeof initialState === 'function') {
+    const initialStateInitializer = initialState;
+    // $FlowFixMe[incompatible-use]: Flow doesn't like mixed types
+    initialState = initialStateInitializer();
+    if (shouldDoubleInvokeUserFnsInHooksDEV) {
+      setIsStrictModeForDevtools(true);
+      try {
+        // $FlowFixMe[incompatible-use]: Flow doesn't like mixed types
+        initialStateInitializer();
+      } finally {
+        setIsStrictModeForDevtools(false);
+      }
+    }
+  }
+
+  hook.memoizedState = hook.baseState = initialState;
+  const queue: UpdateQueue<S, BasicStateAction<S>> = {
+    pending: null,
+    lanes: NoLanes,
+    dispatch: null,
+    lastRenderedReducer: basicStateReducer,
+    lastRenderedState: (initialState: any),
+  };
+  hook.queue = queue;
+  return hook;
+}
+
+function basicStateReducer<S>(state: S, action: BasicStateAction<S>): S {
+  // $FlowFixMe[incompatible-use]: Flow doesn't like mixed types
+  return typeof action === 'function' ? action(state) : action;
+}
+
+function mountWorkInProgressHook(): Hook {
+  const hook: Hook = {
+    // 真正使用时的状态，会被更新
+    memoizedState: null,
+
+    // 初始化时外部传入的状态，不会被更新
+    baseState: null,
+
+    // @why 下面这两个不知道干嘛的
+    baseQueue: null,
+    queue: null,
+
+    // 连接到下一个 hook
+    next: null,
+  };
+
+  // 如果是第一个 hook
+  if (workInProgressHook === null) {
+    // This is the first hook in the list
+    // 对于第一个 hook 需要把它挂载到 fiber 上
+    // 对 hook 来说，state 是他内部的状态，对 fiber 来说，hook 就是他的状态
+    currentlyRenderingFiber.memoizedState = workInProgressHook = hook;
+  } else {
+    // Append to the end of the list
+    // 将新创建的 hook 挂载到链表的末尾
+    workInProgressHook = workInProgressHook.next = hook;
+  }
+  // 返回当前创建的 hook
+  return workInProgressHook;
 }
 
 function mountTransition(): [

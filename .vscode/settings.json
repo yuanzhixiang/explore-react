@@ -7,12 +7,16 @@
   "editor.detectIndentation": false,
   // 保存时自动格式化
   "editor.formatOnSave": true,
-  // 禁用 JS 校验，但保留语言服务（跳转、补全等都还在）
+  // 禁用 JS/TS 校验，但保留语言服务（跳转、补全等都还在）
   "javascript.validate.enable": false,
+  "typescript.validate.enable": false,
   // 这两个是 VSCode 的 TS/JS 语言服务开关，默认 Cmd+Click 会跳到类型声明，
   // 开启 preferGoToSourceDefinition 后会优先尝试跳到真实源码实现，（如果能找到），找不到才回退到 .d.ts
   "javascript.preferGoToSourceDefinition": true,
   "typescript.preferGoToSourceDefinition": true,
   // 指定 prettier 的路径为项目本地安装的版本，确保使用一致的格式化规则
   "prettier.prettierPath": "./node_modules/prettier",
+
+  // 增加 TypeScript 语言服务的内存限制，不然 vscode 会卡死
+  "typescript.tsserver.maxTsServerMemory": 16384,
 }

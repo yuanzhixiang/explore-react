@@ -31,8 +31,8 @@ import {
 } from './ReactFiberFlags';
 import {NoMode, ConcurrentMode} from './ReactTypeOfMode';
 import {
-  // getIteratorFn,
-  // ASYNC_ITERATOR,
+  getIteratorFn,
+  ASYNC_ITERATOR,
   REACT_ELEMENT_TYPE,
   REACT_FRAGMENT_TYPE,
   REACT_PORTAL_TYPE,
@@ -48,7 +48,7 @@ import {
   Fragment,
   FunctionComponent,
 } from './ReactWorkTags';
-// import isArray from 'shared/isArray';
+import isArray from 'shared/isArray';
 import {
   enableAsyncIterableChildren,
   disableLegacyMode,
@@ -527,6 +527,54 @@ function createChildReconciler(
         }
       }
 
+      if (isArray(newChild)) {
+        const prevDebugInfo = pushDebugInfo(newChild._debugInfo);
+        const firstChild = reconcileChildrenArray(
+          returnFiber,
+          currentFirstChild,
+          newChild,
+          lanes,
+        );
+        currentDebugInfo = prevDebugInfo;
+        return firstChild;
+      }
+
+      if (getIteratorFn(newChild)) {
+        throw new Error('Not implemented yet.');
+      }
+
+      if (
+        enableAsyncIterableChildren &&
+        typeof newChild[ASYNC_ITERATOR] === 'function'
+      ) {
+        throw new Error('Not implemented yet.');
+      }
+
+      // Usables are a valid React node type. When React encounters a Usable in
+      // a child position, it unwraps it using the same algorithm as `use`. For
+      // example, for promises, React will throw an exception to unwind the
+      // stack, then replay the component once the promise resolves.
+      //
+      // A difference from `use` is that React will keep unwrapping the value
+      // until it reaches a non-Usable type.
+      //
+      // e.g. Usable<Usable<Usable<T>>> should resolve to T
+      //
+      // The structure is a bit unfortunate. Ideally, we shouldn't need to
+      // replay the entire begin phase of the parent fiber in order to reconcile
+      // the children again. This would require a somewhat significant refactor,
+      // because reconcilation happens deep within the begin phase, and
+      // depending on the type of work, not always at the end. We should
+      // consider as an future improvement.
+      if (typeof newChild.then === 'function') {
+        throw new Error('Not implemented yet.');
+      }
+
+      if (newChild.$$typeof === REACT_CONTEXT_TYPE) {
+        throw new Error('Not implemented yet.');
+      }
+
+      // throwOnInvalidObjectType(returnFiber, newChild);
       throw new Error('Not implemented yet.');
     }
 
