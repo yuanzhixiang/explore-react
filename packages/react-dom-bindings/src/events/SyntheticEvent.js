@@ -97,3 +97,82 @@ const EventInterface: EventInterfaceType = {
   isTrusted: 0,
 };
 export const SyntheticEvent: $FlowFixMe = createSyntheticEvent(EventInterface);
+
+const UIEventInterface: EventInterfaceType = {
+  ...EventInterface,
+  view: 0,
+  detail: 0,
+};
+
+function getEventModifierState(nativeEvent: {[propName: string]: mixed}) {
+  // return modifierStateGetter;
+  throw new Error('Not implemented yet.');
+}
+
+/**
+ * @interface MouseEvent
+ * @see http://www.w3.org/TR/DOM-Level-3-Events/
+ */
+const MouseEventInterface: EventInterfaceType = {
+  ...UIEventInterface,
+  screenX: 0,
+  screenY: 0,
+  clientX: 0,
+  clientY: 0,
+  pageX: 0,
+  pageY: 0,
+  ctrlKey: 0,
+  shiftKey: 0,
+  altKey: 0,
+  metaKey: 0,
+  getModifierState: getEventModifierState,
+  button: 0,
+  buttons: 0,
+  relatedTarget: function (event) {
+    if (event.relatedTarget === undefined)
+      return event.fromElement === event.srcElement
+        ? event.toElement
+        : event.fromElement;
+
+    return event.relatedTarget;
+  },
+  movementX: function (event) {
+    // if ('movementX' in event) {
+    //   return event.movementX;
+    // }
+    // updateMouseMovementPolyfillState(event);
+    // return lastMovementX;
+    throw new Error('Not implemented yet.');
+  },
+  movementY: function (event) {
+    // if ('movementY' in event) {
+    //   return event.movementY;
+    // }
+    // // Don't need to call updateMouseMovementPolyfillState() here
+    // // because it's guaranteed to have already run when movementX
+    // // was copied.
+    // return lastMovementY;
+    throw new Error('Not implemented yet.');
+  },
+};
+
+/**
+ * @interface PointerEvent
+ * @see http://www.w3.org/TR/pointerevents/
+ */
+const PointerEventInterface: EventInterfaceType = {
+  ...MouseEventInterface,
+  pointerId: 0,
+  width: 0,
+  height: 0,
+  pressure: 0,
+  tangentialPressure: 0,
+  tiltX: 0,
+  tiltY: 0,
+  twist: 0,
+  pointerType: 0,
+  isPrimary: 0,
+};
+export const SyntheticPointerEvent: $FlowFixMe = createSyntheticEvent(
+  PointerEventInterface,
+);

@@ -46,7 +46,7 @@ import getEventTarget from './getEventTarget';
 // } from '../client/ReactDOMComponentTree';
 import {COMMENT_NODE, DOCUMENT_NODE} from '../client/HTMLNodeType';
 import {batchedUpdates} from './ReactDOMUpdateBatching';
-// import getListener from './getListener';
+import getListener from './getListener';
 import {passiveBrowserEventsSupported} from './checkPassiveEvents';
 
 import {
@@ -408,7 +408,32 @@ function dispatchEventsForPlugins(
     eventSystemFlags,
     targetContainer,
   );
-  throw new Error('Not implemented yet.');
+  processDispatchQueue(dispatchQueue, eventSystemFlags);
+}
+
+export function processDispatchQueue(
+  dispatchQueue: DispatchQueue,
+  eventSystemFlags: EventSystemFlags,
+): void {
+  const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0;
+  for (let i = 0; i < dispatchQueue.length; i++) {
+    const {event, listeners} = dispatchQueue[i];
+    processDispatchQueueItemsInOrder(event, listeners, inCapturePhase);
+    //  event system doesn't use pooling.
+  }
+}
+
+function processDispatchQueueItemsInOrder(
+  event: ReactSyntheticEvent,
+  dispatchListeners: Array<DispatchListener>,
+  inCapturePhase: boolean,
+): void {
+  let previousInstance;
+  if (inCapturePhase) {
+    throw new Error('Not implemented yet.');
+  } else {
+    throw new Error('Not implemented yet.');
+  }
 }
 
 function extractEvents(
@@ -489,4 +514,76 @@ function isMatchingRootContainer(
       grandContainer.nodeType === COMMENT_NODE &&
       grandContainer.parentNode === targetContainer)
   );
+}
+
+export function accumulateSinglePhaseListeners(
+  targetFiber: Fiber | null,
+  reactName: string | null,
+  nativeEventType: string,
+  inCapturePhase: boolean,
+  accumulateTargetOnly: boolean,
+  nativeEvent: AnyNativeEvent,
+): Array<DispatchListener> {
+  const captureName = reactName !== null ? reactName + 'Capture' : null;
+  const reactEventName = inCapturePhase ? captureName : reactName;
+  let listeners: Array<DispatchListener> = [];
+
+  let instance = targetFiber;
+  let lastHostComponent = null;
+
+  // Accumulate all instances and listeners via the target -> root path.
+  while (instance !== null) {
+    const {stateNode, tag} = instance;
+    // Handle listeners that are on HostComponents (i.e. <div>)
+    if (
+      (tag === HostComponent ||
+        tag === HostHoistable ||
+        tag === HostSingleton) &&
+      stateNode !== null
+    ) {
+      lastHostComponent = stateNode;
+
+      // createEventHandle listeners
+      if (enableCreateEventHandleAPI) {
+        throw new Error('Not implemented yet.');
+      }
+
+      // Standard React on* listeners, i.e. onClick or onClickCapture
+      if (reactEventName !== null) {
+        const listener = getListener(instance, reactEventName);
+        if (listener != null) {
+          // listeners.push(
+          //   createDispatchListener(instance, listener, lastHostComponent),
+          // );
+          throw new Error('Not implemented yet.');
+        }
+      }
+    } else if (
+      enableCreateEventHandleAPI &&
+      enableScopeAPI &&
+      tag === ScopeComponent &&
+      lastHostComponent !== null &&
+      stateNode !== null
+    ) {
+      throw new Error('Not implemented yet.');
+    }
+
+    // If we are only accumulating events for the target, then we don't
+    // continue to propagate through the React fiber tree to find other
+    // listeners.
+    if (accumulateTargetOnly) {
+      break;
+    }
+    // If we are processing the onBeforeBlur event, then we need to take
+    // into consideration that part of the React tree might have been hidden
+    // or deleted (as we're invoking this event during commit). We can find
+    // this out by checking if intercept fiber set on the event matches the
+    // current instance fiber. In which case, we should clear all existing
+    // listeners.
+    if (enableCreateEventHandleAPI && nativeEvent.type === 'beforeblur') {
+      throw new Error('Not implemented yet.');
+    }
+    instance = instance.return;
+  }
+  return listeners;
 }

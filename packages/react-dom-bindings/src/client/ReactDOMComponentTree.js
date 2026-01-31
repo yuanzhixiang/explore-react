@@ -140,3 +140,17 @@ export function getClosestInstanceFromNode(targetNode: Node): null | Fiber {
 
   throw new Error('Not implemented');
 }
+
+export function getFiberCurrentPropsFromNode(
+  node:
+    | Container
+    | Instance
+    | TextInstance
+    | SuspenseInstance
+    | ActivityInstance,
+): Props | null {
+  if (enableInternalInstanceMap) {
+    return internalPropsMap.get(node) || null;
+  }
+  return (node: any)[internalPropsKey] || null;
+}
