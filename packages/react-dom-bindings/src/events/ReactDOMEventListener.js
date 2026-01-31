@@ -17,11 +17,11 @@ import type {
 } from '../client/ReactFiberConfigDOM';
 import type {DOMEventName} from '../events/DOMEventNames';
 
-// import {
-//   isDiscreteEventThatRequiresHydration,
-//   clearIfContinuousEvent,
-//   queueIfContinuousEvent,
-// } from './ReactDOMEventReplaying';
+import {
+  // isDiscreteEventThatRequiresHydration,
+  clearIfContinuousEvent,
+  // queueIfContinuousEvent,
+} from './ReactDOMEventReplaying';
 // import {attemptSynchronousHydration} from 'react-reconciler/src/ReactFiberReconciler';
 import {
   getNearestMountedFiber,
@@ -199,9 +199,8 @@ export function dispatchEvent(
       return_targetInst,
       targetContainer,
     );
-    // clearIfContinuousEvent(domEventName, nativeEvent);
-    // return;
-    throw new Error('Not implemented');
+    clearIfContinuousEvent(domEventName, nativeEvent);
+    return;
   }
   throw new Error('Not implemented');
 }

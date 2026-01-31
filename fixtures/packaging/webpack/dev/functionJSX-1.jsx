@@ -8,7 +8,12 @@ import * as ReactDOMClient from 'react-dom/client';
 
 function App() {
   const [count, setCount] = useState(0);
-  return <h1 onClick={() => setCount(count + 1)}>{`Hello World! ${count}`}</h1>;
+  return (
+    <h1
+      onClick={() => {
+        setCount(count + 1);
+      }}>{`Hello World! ${count}`}</h1>
+  );
 }
 
 var container = document.getElementById('container');

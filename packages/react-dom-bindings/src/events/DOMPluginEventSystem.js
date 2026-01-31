@@ -480,7 +480,53 @@ function extractEvents(
   // that might cause other unknown side-effects that we
   // can't foresee right now.
   if (shouldProcessPolyfillPlugins) {
-    throw new Error('Not implemented yet.');
+    // @why 下面这段逻辑建议完全搞懂，然后再抄，这块已经进入最底层了，
+    // 并且有很多重复代码，我看懂了就能快速拿过来，但如果没看懂就会处理的很慢
+    // EnterLeaveEventPlugin.extractEvents(
+    //   dispatchQueue,
+    //   domEventName,
+    //   targetInst,
+    //   nativeEvent,
+    //   nativeEventTarget,
+    //   eventSystemFlags,
+    //   targetContainer,
+    // );
+    // ChangeEventPlugin.extractEvents(
+    //   dispatchQueue,
+    //   domEventName,
+    //   targetInst,
+    //   nativeEvent,
+    //   nativeEventTarget,
+    //   eventSystemFlags,
+    //   targetContainer,
+    // );
+    // SelectEventPlugin.extractEvents(
+    //   dispatchQueue,
+    //   domEventName,
+    //   targetInst,
+    //   nativeEvent,
+    //   nativeEventTarget,
+    //   eventSystemFlags,
+    //   targetContainer,
+    // );
+    // BeforeInputEventPlugin.extractEvents(
+    //   dispatchQueue,
+    //   domEventName,
+    //   targetInst,
+    //   nativeEvent,
+    //   nativeEventTarget,
+    //   eventSystemFlags,
+    //   targetContainer,
+    // );
+    // FormActionEventPlugin.extractEvents(
+    //   dispatchQueue,
+    //   domEventName,
+    //   targetInst,
+    //   nativeEvent,
+    //   nativeEventTarget,
+    //   eventSystemFlags,
+    //   targetContainer,
+    // );
   }
   if (enableScrollEndPolyfill) {
     throw new Error('Not implemented yet.');

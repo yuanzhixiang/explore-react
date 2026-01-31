@@ -138,3 +138,36 @@ function replayUnblockedEvents() {
   hasScheduledReplayAttempt = false;
   throw new Error('Not implemented yet.');
 }
+
+// Resets the replaying for this type of continuous event to no event.
+export function clearIfContinuousEvent(
+  domEventName: DOMEventName,
+  nativeEvent: AnyNativeEvent,
+): void {
+  switch (domEventName) {
+    case 'focusin':
+    case 'focusout':
+      queuedFocus = null;
+      break;
+    case 'dragenter':
+    case 'dragleave':
+      queuedDrag = null;
+      break;
+    case 'mouseover':
+    case 'mouseout':
+      queuedMouse = null;
+      break;
+    case 'pointerover':
+    case 'pointerout': {
+      const pointerId = ((nativeEvent: any): PointerEventType).pointerId;
+      queuedPointers.delete(pointerId);
+      break;
+    }
+    case 'gotpointercapture':
+    case 'lostpointercapture': {
+      const pointerId = ((nativeEvent: any): PointerEventType).pointerId;
+      queuedPointerCaptures.delete(pointerId);
+      break;
+    }
+  }
+}
