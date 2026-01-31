@@ -14,21 +14,21 @@ import type {DispatchQueue} from '../DOMPluginEventSystem';
 import type {EventSystemFlags} from '../EventSystemFlags';
 import type {ReactSyntheticEvent} from '../ReactSyntheticEventType';
 
-// import {
-//   SyntheticEvent,
-//   SyntheticKeyboardEvent,
-//   SyntheticFocusEvent,
-//   SyntheticMouseEvent,
-//   SyntheticDragEvent,
-//   SyntheticTouchEvent,
-//   SyntheticAnimationEvent,
-//   SyntheticTransitionEvent,
-//   SyntheticUIEvent,
-//   SyntheticWheelEvent,
-//   SyntheticClipboardEvent,
-//   SyntheticPointerEvent,
-//   SyntheticToggleEvent,
-// } from '../../events/SyntheticEvent';
+import {
+  SyntheticEvent,
+  //   SyntheticKeyboardEvent,
+  //   SyntheticFocusEvent,
+  //   SyntheticMouseEvent,
+  //   SyntheticDragEvent,
+  //   SyntheticTouchEvent,
+  //   SyntheticAnimationEvent,
+  //   SyntheticTransitionEvent,
+  //   SyntheticUIEvent,
+  //   SyntheticWheelEvent,
+  //   SyntheticClipboardEvent,
+  //   SyntheticPointerEvent,
+  //   SyntheticToggleEvent,
+} from '../../events/SyntheticEvent';
 
 // import {
 //   ANIMATION_END,
@@ -62,6 +62,13 @@ function extractEvents(
   eventSystemFlags: EventSystemFlags,
   targetContainer: EventTarget,
 ): void {
+  const reactName = topLevelEventsToReactNames.get(domEventName);
+  if (reactName === undefined) {
+    return;
+  }
+  let SyntheticEventCtor = SyntheticEvent;
+  let reactEventType: string = domEventName;
+
   throw new Error('Not implemented: SimpleEventPlugin.extractEvents');
 }
 

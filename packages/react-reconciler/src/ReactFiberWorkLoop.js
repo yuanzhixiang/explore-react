@@ -2065,3 +2065,73 @@ export function captureCommitPhaseError(
   console.error('captureCommitPhaseError', error);
   throw new Error('Not implemented yet.');
 }
+
+export function batchedUpdates<A, R>(fn: A => R, a: A): R {
+  if (disableLegacyMode) {
+    // batchedUpdates is a no-op now, but there's still some internal react-dom
+    // code calling it, that we can't remove until we remove legacy mode.
+    return fn(a);
+  } else {
+    const prevExecutionContext = executionContext;
+    executionContext |= BatchedContext;
+    try {
+      return fn(a);
+    } finally {
+      // executionContext = prevExecutionContext;
+      // // If there were legacy sync updates, flush them at the end of the outer
+      // // most batchedUpdates-like method.
+      // if (
+      //   executionContext === NoContext &&
+      //   // Treat `act` as if it's inside `batchedUpdates`, even in legacy mode.
+      //   !(__DEV__ && ReactSharedInternals.isBatchingLegacy)
+      // ) {
+      //   resetRenderTimer();
+      //   flushSyncWorkOnLegacyRootsOnly();
+      // }
+
+      throw new Error('Not implemented yet.');
+    }
+  }
+}
+
+export function discreteUpdates<A, B, C, D, R>(
+  fn: (A, B, C, D) => R,
+  a: A,
+  b: B,
+  c: C,
+  d: D,
+): R {
+  // 保存当前的 transition
+  const prevTransition = ReactSharedInternals.T;
+  // 保存当前的更新优先级
+  const previousPriority = getCurrentUpdatePriority();
+  try {
+    // 把当前更新优先级强制设为离散事件优先级（如 click、keydown 之类），让本次更新更高优先级执行
+    setCurrentUpdatePriority(DiscreteEventPriority);
+    // 临时清空 transition 上下文，确保这次更新不被视为某个 transition 的一部分
+    ReactSharedInternals.T = null;
+    return fn(a, b, c, d);
+  } finally {
+    // 恢复之前的更新优先级
+    setCurrentUpdatePriority(previousPriority);
+    // 恢复之前的 transition
+    ReactSharedInternals.T = prevTransition;
+    if (executionContext === NoContext) {
+      resetRenderTimer();
+    }
+  }
+}
+
+function resetRenderTimer() {
+  workInProgressRootRenderTargetTime = now() + RENDER_TIMEOUT_MS;
+}
+
+// If called outside of a render or commit will flush all sync work on all roots
+// Returns whether the the call was during a render or not
+export function flushSyncWork(): boolean {
+  if ((executionContext & (RenderContext | CommitContext)) === NoContext) {
+    flushSyncWorkOnAllRoots();
+    return false;
+  }
+  return true;
+}

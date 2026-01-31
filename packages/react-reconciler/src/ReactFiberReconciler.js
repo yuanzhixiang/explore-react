@@ -72,12 +72,12 @@ import {
   scheduleUpdateOnFiber,
   // scheduleInitialHydrationOnRoot,
   // flushRoot,
-  // batchedUpdates,
+  batchedUpdates,
   // flushSyncFromReconciler,
-  // flushSyncWork,
+  flushSyncWork,
   // isAlreadyRendering,
   // deferredUpdates,
-  // discreteUpdates,
+  discreteUpdates,
   // flushPendingEffects,
 } from './ReactFiberWorkLoop';
 // import {enqueueConcurrentRenderForLane} from './ReactFiberConcurrentUpdates';
@@ -279,3 +279,13 @@ function updateContainerImpl(
     entangleTransitions(root, rootFiber, lane);
   }
 }
+
+export {
+  batchedUpdates,
+  // deferredUpdates,
+  discreteUpdates,
+  // flushSyncFromReconciler,
+  flushSyncWork,
+  // isAlreadyRendering,
+  // flushPendingEffects as flushPassiveEffects,
+};

@@ -9,7 +9,7 @@
 
 import type {DOMEventName} from './DOMEventNames';
 import type {EventSystemFlags} from './EventSystemFlags';
-// import type {AnyNativeEvent} from './PluginModuleType';
+import type {AnyNativeEvent} from './PluginModuleType';
 import type {
   KnownReactSyntheticEvent,
   ReactSyntheticEvent,
@@ -25,7 +25,7 @@ import {
   IS_EVENT_HANDLE_NON_MANAGED_NODE,
   IS_NON_DELEGATED,
 } from './EventSystemFlags';
-// import {isReplayingEvent} from './CurrentReplayingEvent';
+import {isReplayingEvent} from './CurrentReplayingEvent';
 
 import {
   HostRoot,
@@ -38,14 +38,14 @@ import {
 } from 'react-reconciler/src/ReactWorkTags';
 // import {getLowestCommonAncestor} from 'react-reconciler/src/ReactFiberTreeReflection';
 
-// import getEventTarget from './getEventTarget';
+import getEventTarget from './getEventTarget';
 // import {
 //   getClosestInstanceFromNode,
 //   getEventListenerSet,
 //   getEventHandlerListeners,
 // } from '../client/ReactDOMComponentTree';
 import {COMMENT_NODE, DOCUMENT_NODE} from '../client/HTMLNodeType';
-// import {batchedUpdates} from './ReactDOMUpdateBatching';
+import {batchedUpdates} from './ReactDOMUpdateBatching';
 // import getListener from './getListener';
 import {passiveBrowserEventsSupported} from './checkPassiveEvents';
 
@@ -314,4 +314,179 @@ function addTrappedEventListener(
       );
     }
   }
+}
+
+export function dispatchEventForPluginEventSystem(
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+  nativeEvent: AnyNativeEvent,
+  targetInst: null | Fiber,
+  targetContainer: EventTarget,
+): void {
+  let ancestorInst = targetInst;
+  if (
+    (eventSystemFlags & IS_EVENT_HANDLE_NON_MANAGED_NODE) === 0 &&
+    (eventSystemFlags & IS_NON_DELEGATED) === 0
+  ) {
+    const targetContainerNode = ((targetContainer: any): Node);
+
+    // If we are using the legacy FB support flag, we
+    // defer the event to the null with a one
+    // time event listener so we can defer the event.
+    if (
+      enableLegacyFBSupport &&
+      // If our event flags match the required flags for entering
+      // FB legacy mode and we are processing the "click" event,
+      // then we can defer the event to the "document", to allow
+      // for legacy FB support, where the expected behavior was to
+      // match React < 16 behavior of delegated clicks to the doc.
+      domEventName === 'click' &&
+      (eventSystemFlags & SHOULD_NOT_DEFER_CLICK_FOR_FB_SUPPORT_MODE) === 0 &&
+      !isReplayingEvent(nativeEvent)
+    ) {
+      deferClickToDocumentForLegacyFBSupport(domEventName, targetContainer);
+      return;
+    }
+
+    if (targetInst !== null) {
+      // The below logic attempts to work out if we need to change
+      // the target fiber to a different ancestor. We had similar logic
+      // in the legacy event system, except the big difference between
+      // systems is that the modern event system now has an event listener
+      // attached to each React Root and React Portal Root. Together,
+      // the DOM nodes representing these roots are the "rootContainer".
+      // To figure out which ancestor instance we should use, we traverse
+      // up the fiber tree from the target instance and attempt to find
+      // root boundaries that match that of our current "rootContainer".
+      // If we find that "rootContainer", we find the parent fiber
+      // sub-tree for that root and make that our ancestor instance.
+      let node: null | Fiber = targetInst;
+
+      mainLoop: while (true) {
+        if (node === null) {
+          return;
+        }
+        const nodeTag = node.tag;
+        if (nodeTag === HostRoot || nodeTag === HostPortal) {
+          let container = node.stateNode.containerInfo;
+          if (isMatchingRootContainer(container, targetContainerNode)) {
+            break;
+          }
+          throw new Error('Not implemented');
+        }
+        node = node.return;
+      }
+    }
+  }
+
+  batchedUpdates(() =>
+    dispatchEventsForPlugins(
+      domEventName,
+      eventSystemFlags,
+      nativeEvent,
+      ancestorInst,
+      targetContainer,
+    ),
+  );
+}
+
+function dispatchEventsForPlugins(
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+  nativeEvent: AnyNativeEvent,
+  targetInst: null | Fiber,
+  targetContainer: EventTarget,
+): void {
+  const nativeEventTarget = getEventTarget(nativeEvent);
+  const dispatchQueue: DispatchQueue = [];
+  extractEvents(
+    dispatchQueue,
+    domEventName,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+    eventSystemFlags,
+    targetContainer,
+  );
+  throw new Error('Not implemented yet.');
+}
+
+function extractEvents(
+  dispatchQueue: DispatchQueue,
+  domEventName: DOMEventName,
+  targetInst: null | Fiber,
+  nativeEvent: AnyNativeEvent,
+  nativeEventTarget: null | EventTarget,
+  eventSystemFlags: EventSystemFlags,
+  targetContainer: EventTarget,
+) {
+  // TODO: we should remove the concept of a "SimpleEventPlugin".
+  // This is the basic functionality of the event system. All
+  // the other plugins are essentially polyfills. So the plugin
+  // should probably be inlined somewhere and have its logic
+  // be core the to event system. This would potentially allow
+  // us to ship builds of React without the polyfilled plugins below.
+  SimpleEventPlugin.extractEvents(
+    dispatchQueue,
+    domEventName,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+    eventSystemFlags,
+    targetContainer,
+  );
+  const shouldProcessPolyfillPlugins =
+    (eventSystemFlags & SHOULD_NOT_PROCESS_POLYFILL_EVENT_PLUGINS) === 0;
+  // We don't process these events unless we are in the
+  // event's native "bubble" phase, which means that we're
+  // not in the capture phase. That's because we emulate
+  // the capture phase here still. This is a trade-off,
+  // because in an ideal world we would not emulate and use
+  // the phases properly, like we do with the SimpleEvent
+  // plugin. However, the plugins below either expect
+  // emulation (EnterLeave) or use state localized to that
+  // plugin (BeforeInput, Change, Select). The state in
+  // these modules complicates things, as you'll essentially
+  // get the case where the capture phase event might change
+  // state, only for the following bubble event to come in
+  // later and not trigger anything as the state now
+  // invalidates the heuristics of the event plugin. We
+  // could alter all these plugins to work in such ways, but
+  // that might cause other unknown side-effects that we
+  // can't foresee right now.
+  if (shouldProcessPolyfillPlugins) {
+    throw new Error('Not implemented yet.');
+  }
+  if (enableScrollEndPolyfill) {
+    throw new Error('Not implemented yet.');
+  }
+}
+
+function deferClickToDocumentForLegacyFBSupport(
+  domEventName: DOMEventName,
+  targetContainer: EventTarget,
+): void {
+  // We defer all click events with legacy FB support mode on.
+  // This means we add a one time event listener to trigger
+  // after the FB delegated listeners fire.
+  const isDeferredListenerForLegacyFBSupport = true;
+  addTrappedEventListener(
+    targetContainer,
+    domEventName,
+    IS_LEGACY_FB_SUPPORT_MODE,
+    false,
+    isDeferredListenerForLegacyFBSupport,
+  );
+}
+
+function isMatchingRootContainer(
+  grandContainer: Element,
+  targetContainer: EventTarget,
+): boolean {
+  return (
+    grandContainer === targetContainer ||
+    (!disableCommentsAsDOMContainers &&
+      grandContainer.nodeType === COMMENT_NODE &&
+      grandContainer.parentNode === targetContainer)
+  );
 }

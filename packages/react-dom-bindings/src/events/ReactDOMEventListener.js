@@ -23,12 +23,12 @@ import type {DOMEventName} from '../events/DOMEventNames';
 //   queueIfContinuousEvent,
 // } from './ReactDOMEventReplaying';
 // import {attemptSynchronousHydration} from 'react-reconciler/src/ReactFiberReconciler';
-// import {
-//   getNearestMountedFiber,
-//   getContainerFromFiber,
-//   getActivityInstanceFromFiber,
-//   getSuspenseInstanceFromFiber,
-// } from 'react-reconciler/src/ReactFiberTreeReflection';
+import {
+  getNearestMountedFiber,
+  //   getContainerFromFiber,
+  //   getActivityInstanceFromFiber,
+  //   getSuspenseInstanceFromFiber,
+} from 'react-reconciler/src/ReactFiberTreeReflection';
 import {
   HostRoot,
   ActivityComponent,
@@ -42,7 +42,7 @@ import {
   getClosestInstanceFromNode,
 } from '../client/ReactDOMComponentTree';
 
-// import {dispatchEventForPluginEventSystem} from './DOMPluginEventSystem';
+import {dispatchEventForPluginEventSystem} from './DOMPluginEventSystem';
 import {
   getCurrentUpdatePriority,
   setCurrentUpdatePriority,
@@ -153,7 +153,26 @@ export function findInstanceBlockingTarget(
   let targetInst = getClosestInstanceFromNode(targetNode);
 
   if (targetInst !== null) {
-    throw new Error('Not implemented');
+    const nearestMounted = getNearestMountedFiber(targetInst);
+    if (nearestMounted === null) {
+      // This tree has been unmounted already. Dispatch without a target.
+      targetInst = null;
+    } else {
+      const tag = nearestMounted.tag;
+      if (tag === SuspenseComponent) {
+        throw new Error('Not implemented');
+      } else if (tag === ActivityComponent) {
+        throw new Error('Not implemented');
+      } else if (tag === HostRoot) {
+        throw new Error('Not implemented');
+      } else if (nearestMounted !== targetInst) {
+        // If we get an event (ex: img onload) before committing that
+        // component's mount, ignore it for now (that is, treat it as if it was an
+        // event on a non-React tree). We might also consider queueing events and
+        // dispatching them after the mount.
+        targetInst = null;
+      }
+    }
   }
 
   return_targetInst = targetInst;
@@ -180,8 +199,9 @@ export function dispatchEvent(
       return_targetInst,
       targetContainer,
     );
-    clearIfContinuousEvent(domEventName, nativeEvent);
-    return;
+    // clearIfContinuousEvent(domEventName, nativeEvent);
+    // return;
+    throw new Error('Not implemented');
   }
   throw new Error('Not implemented');
 }

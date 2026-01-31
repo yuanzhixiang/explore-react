@@ -12,7 +12,7 @@
       //   // 保证 packages 下面的源码能进入断点
       //   "/@fs/*": "/*",
       //   // 保证 fixtures/packaging/webpack/dev 下面的源码能进入断点
-      //   "*": "${workspaceFolder}/fixtures/packaging/webpack/dev/*"
+      //   "/@fs/${workspaceFolder}/fixtures/packaging/webpack/dev/*": "${workspaceFolder}/fixtures/packaging/webpack/dev/*"
       // }
     },
     {
