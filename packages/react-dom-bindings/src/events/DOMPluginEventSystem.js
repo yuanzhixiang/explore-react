@@ -499,15 +499,15 @@ function extractEvents(
       eventSystemFlags,
       targetContainer,
     );
-    // ChangeEventPlugin.extractEvents(
-    //   dispatchQueue,
-    //   domEventName,
-    //   targetInst,
-    //   nativeEvent,
-    //   nativeEventTarget,
-    //   eventSystemFlags,
-    //   targetContainer,
-    // );
+    ChangeEventPlugin.extractEvents(
+      dispatchQueue,
+      domEventName,
+      targetInst,
+      nativeEvent,
+      nativeEventTarget,
+      eventSystemFlags,
+      targetContainer,
+    );
     // SelectEventPlugin.extractEvents(
     //   dispatchQueue,
     //   domEventName,
