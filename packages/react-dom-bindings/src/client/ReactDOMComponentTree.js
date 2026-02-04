@@ -151,32 +151,35 @@ export function getClosestInstanceFromNode(targetNode: Node): null | Fiber {
     // node and the first child. It isn't surrounding the container node.
     // If it's not a container, we check if it's an instance.
     if (enableInternalInstanceMap) {
-      throw new Error('Not implemented');
+      targetInst =
+        (parentNode: any)[internalContainerInstanceKey] ||
+        internalInstanceMap.get(((parentNode: any): InstanceUnion));
     } else {
-      throw new Error('Not implemented');
+      targetInst =
+        (parentNode: any)[internalContainerInstanceKey] ||
+        (parentNode: any)[internalInstanceKey];
     }
 
-    // if (targetInst) {
-    //   // Since this wasn't the direct target of the event, we might have
-    //   // stepped past dehydrated DOM nodes to get here. However they could
-    //   // also have been non-React nodes. We need to answer which one.
+    if (targetInst) {
+      // Since this wasn't the direct target of the event, we might have
+      // stepped past dehydrated DOM nodes to get here. However they could
+      // also have been non-React nodes. We need to answer which one.
 
-    //   // If we the instance doesn't have any children, then there can't be
-    //   // a nested suspense boundary within it. So we can use this as a fast
-    //   // bailout. Most of the time, when people add non-React children to
-    //   // the tree, it is using a ref to a child-less DOM node.
-    //   // Normally we'd only need to check one of the fibers because if it
-    //   // has ever gone from having children to deleting them or vice versa
-    //   // it would have deleted the dehydrated boundary nested inside already.
-    //   // However, since the HostRoot starts out with an alternate it might
-    //   // have one on the alternate so we need to check in case this was a
-    //   // root.
-    //   const alternate = targetInst.alternate;
-    //   throw new Error('Not implemented');
-    // }
-    // targetNode = parentNode;
-    // parentNode = targetNode.parentNode;
-    throw new Error('Not implemented');
+      // If we the instance doesn't have any children, then there can't be
+      // a nested suspense boundary within it. So we can use this as a fast
+      // bailout. Most of the time, when people add non-React children to
+      // the tree, it is using a ref to a child-less DOM node.
+      // Normally we'd only need to check one of the fibers because if it
+      // has ever gone from having children to deleting them or vice versa
+      // it would have deleted the dehydrated boundary nested inside already.
+      // However, since the HostRoot starts out with an alternate it might
+      // have one on the alternate so we need to check in case this was a
+      // root.
+      const alternate = targetInst.alternate;
+      throw new Error('Not implemented');
+    }
+    targetNode = parentNode;
+    parentNode = targetNode.parentNode;
   }
   return null;
 }
@@ -193,4 +196,26 @@ export function getFiberCurrentPropsFromNode(
     return internalPropsMap.get(node) || null;
   }
   return (node: any)[internalPropsKey] || null;
+}
+
+/**
+ * Given a ReactDOMComponent or ReactDOMTextComponent, return the corresponding
+ * DOM node.
+ */
+export function getNodeFromInstance(inst: Fiber): Instance | TextInstance {
+  const tag = inst.tag;
+  if (
+    tag === HostComponent ||
+    tag === HostHoistable ||
+    tag === HostSingleton ||
+    tag === HostText
+  ) {
+    // In Fiber this, is just the state node right now. We assume it will be
+    // a host component or host text.
+    return inst.stateNode;
+  }
+
+  // Without this first invariant, passing a non-DOM-component triggers the next
+  // invariant for a missing parent, which is super confusing.
+  throw new Error('getNodeFromInstance: Invalid argument.');
 }

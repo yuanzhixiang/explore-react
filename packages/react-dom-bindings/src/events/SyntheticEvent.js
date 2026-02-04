@@ -50,7 +50,36 @@ function createSyntheticEvent(Interface: EventInterfaceType) {
     nativeEvent: {[propName: string]: mixed, ...},
     nativeEventTarget: null | EventTarget,
   ) {
-    throw new Error('Not implemented yet.');
+    this._reactName = reactName;
+    this._targetInst = targetInst;
+    this.type = reactEventType;
+    this.nativeEvent = nativeEvent;
+    this.target = nativeEventTarget;
+    this.currentTarget = null;
+
+    for (const propName in Interface) {
+      if (!Interface.hasOwnProperty(propName)) {
+        continue;
+      }
+      const normalize = Interface[propName];
+      if (normalize) {
+        this[propName] = normalize(nativeEvent);
+      } else {
+        this[propName] = nativeEvent[propName];
+      }
+    }
+
+    const defaultPrevented =
+      nativeEvent.defaultPrevented != null
+        ? nativeEvent.defaultPrevented
+        : nativeEvent.returnValue === false;
+    if (defaultPrevented) {
+      this.isDefaultPrevented = functionThatReturnsTrue;
+    } else {
+      this.isDefaultPrevented = functionThatReturnsFalse;
+    }
+    this.isPropagationStopped = functionThatReturnsFalse;
+    return this;
   }
 
   // $FlowFixMe[prop-missing] found when upgrading Flow
@@ -104,9 +133,35 @@ const UIEventInterface: EventInterfaceType = {
   detail: 0,
 };
 
-function getEventModifierState(nativeEvent: {[propName: string]: mixed}) {
-  // return modifierStateGetter;
+/**
+ * Translation from modifier key to the associated property in the event.
+ * @see http://www.w3.org/TR/DOM-Level-3-Events/#keys-Modifiers
+ */
+const modifierKeyToProp = {
+  Alt: 'altKey',
+  Control: 'ctrlKey',
+  Meta: 'metaKey',
+  Shift: 'shiftKey',
+};
+
+// Older browsers (Safari <= 10, iOS Safari <= 10.2) do not support
+// getModifierState. If getModifierState is not supported, we map it to a set of
+// modifier keys exposed by the event. In this case, Lock-keys are not supported.
+// $FlowFixMe[missing-local-annot]
+// $FlowFixMe[missing-this-annot]
+function modifierStateGetter(keyArg) {
+  // const syntheticEvent = this;
+  // const nativeEvent = syntheticEvent.nativeEvent;
+  // if (nativeEvent.getModifierState) {
+  //   return nativeEvent.getModifierState(keyArg);
+  // }
+  // const keyProp = modifierKeyToProp[keyArg];
+  // return keyProp ? !!nativeEvent[keyProp] : false;
   throw new Error('Not implemented yet.');
+}
+
+function getEventModifierState(nativeEvent: {[propName: string]: mixed}) {
+  return modifierStateGetter;
 }
 
 /**
@@ -137,20 +192,20 @@ const MouseEventInterface: EventInterfaceType = {
     return event.relatedTarget;
   },
   movementX: function (event) {
-    // if ('movementX' in event) {
-    //   return event.movementX;
-    // }
+    if ('movementX' in event) {
+      return event.movementX;
+    }
     // updateMouseMovementPolyfillState(event);
     // return lastMovementX;
     throw new Error('Not implemented yet.');
   },
   movementY: function (event) {
-    // if ('movementY' in event) {
-    //   return event.movementY;
-    // }
-    // // Don't need to call updateMouseMovementPolyfillState() here
-    // // because it's guaranteed to have already run when movementX
-    // // was copied.
+    if ('movementY' in event) {
+      return event.movementY;
+    }
+    // Don't need to call updateMouseMovementPolyfillState() here
+    // because it's guaranteed to have already run when movementX
+    // was copied.
     // return lastMovementY;
     throw new Error('Not implemented yet.');
   },
@@ -176,3 +231,6 @@ const PointerEventInterface: EventInterfaceType = {
 export const SyntheticPointerEvent: $FlowFixMe = createSyntheticEvent(
   PointerEventInterface,
 );
+
+export const SyntheticMouseEvent: $FlowFixMe =
+  createSyntheticEvent(MouseEventInterface);

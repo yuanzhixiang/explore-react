@@ -129,7 +129,16 @@ function dispatchContinuousEvent(
   container: EventTarget,
   nativeEvent: AnyNativeEvent,
 ) {
-  throw new Error('Not implemented');
+  const prevTransition = ReactSharedInternals.T;
+  ReactSharedInternals.T = null;
+  const previousPriority = getCurrentUpdatePriority();
+  try {
+    setCurrentUpdatePriority(ContinuousEventPriority);
+    dispatchEvent(domEventName, eventSystemFlags, container, nativeEvent);
+  } finally {
+    setCurrentUpdatePriority(previousPriority);
+    ReactSharedInternals.T = prevTransition;
+  }
 }
 
 export function findInstanceBlockingEvent(

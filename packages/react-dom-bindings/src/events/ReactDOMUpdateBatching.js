@@ -54,6 +54,8 @@ export function batchedUpdates(fn, a, b) {
   isInsideEventHandler = true;
   try {
     return batchedUpdatesImpl(fn, a, b);
+  } catch (error) {
+    console.error(error);
   } finally {
     isInsideEventHandler = false;
     finishEventHandler();

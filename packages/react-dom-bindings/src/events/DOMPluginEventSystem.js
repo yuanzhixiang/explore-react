@@ -36,7 +36,7 @@ import {
   HostText,
   ScopeComponent,
 } from 'react-reconciler/src/ReactWorkTags';
-// import {getLowestCommonAncestor} from 'react-reconciler/src/ReactFiberTreeReflection';
+import {getLowestCommonAncestor} from 'react-reconciler/src/ReactFiberTreeReflection';
 
 import getEventTarget from './getEventTarget';
 // import {
@@ -372,6 +372,14 @@ export function dispatchEventForPluginEventSystem(
           if (isMatchingRootContainer(container, targetContainerNode)) {
             break;
           }
+          if (nodeTag === HostPortal) {
+            // The target is a portal, but it's not the rootContainer we're looking for.
+            // Normally portals handle their own events all the way down to the root.
+            // So we should be able to stop now. However, we don't know if this portal
+            // was part of *our* root.
+            let grandNode = node.return;
+            throw new Error('Not implemented');
+          }
           throw new Error('Not implemented');
         }
         node = node.return;
@@ -482,15 +490,15 @@ function extractEvents(
   if (shouldProcessPolyfillPlugins) {
     // @why 下面这段逻辑建议完全搞懂，然后再抄，这块已经进入最底层了，
     // 并且有很多重复代码，我看懂了就能快速拿过来，但如果没看懂就会处理的很慢
-    // EnterLeaveEventPlugin.extractEvents(
-    //   dispatchQueue,
-    //   domEventName,
-    //   targetInst,
-    //   nativeEvent,
-    //   nativeEventTarget,
-    //   eventSystemFlags,
-    //   targetContainer,
-    // );
+    EnterLeaveEventPlugin.extractEvents(
+      dispatchQueue,
+      domEventName,
+      targetInst,
+      nativeEvent,
+      nativeEventTarget,
+      eventSystemFlags,
+      targetContainer,
+    );
     // ChangeEventPlugin.extractEvents(
     //   dispatchQueue,
     //   domEventName,
@@ -527,6 +535,7 @@ function extractEvents(
     //   eventSystemFlags,
     //   targetContainer,
     // );
+    throw new Error('Not implemented yet.');
   }
   if (enableScrollEndPolyfill) {
     throw new Error('Not implemented yet.');
@@ -632,4 +641,110 @@ export function accumulateSinglePhaseListeners(
     instance = instance.return;
   }
   return listeners;
+}
+
+// We should only use this function for:
+// - EnterLeaveEventPlugin
+// This is because we only process this plugin
+// in the bubble phase, so we need to accumulate two
+// phase event listeners.
+export function accumulateEnterLeaveTwoPhaseListeners(
+  dispatchQueue: DispatchQueue,
+  leaveEvent: KnownReactSyntheticEvent,
+  enterEvent: null | KnownReactSyntheticEvent,
+  from: Fiber | null,
+  to: Fiber | null,
+): void {
+  const common =
+    from && to ? getLowestCommonAncestor(from, to, getParent) : null;
+
+  if (from !== null) {
+    throw new Error('Not implemented yet.');
+  }
+
+  if (to !== null && enterEvent !== null) {
+    accumulateEnterLeaveListenersForEvent(
+      dispatchQueue,
+      enterEvent,
+      to,
+      common,
+      true,
+    );
+  }
+}
+
+function accumulateEnterLeaveListenersForEvent(
+  dispatchQueue: DispatchQueue,
+  event: KnownReactSyntheticEvent,
+  target: Fiber,
+  common: Fiber | null,
+  inCapturePhase: boolean,
+): void {
+  const registrationName = event._reactName;
+  const listeners: Array<DispatchListener> = [];
+
+  let instance: null | Fiber = target;
+  while (instance !== null) {
+    if (instance === common) {
+      break;
+    }
+    const {alternate, stateNode, tag} = instance;
+    if (alternate !== null && alternate === common) {
+      break;
+    }
+    if (
+      (tag === HostComponent ||
+        tag === HostHoistable ||
+        tag === HostSingleton) &&
+      stateNode !== null
+    ) {
+      const currentTarget = stateNode;
+      if (inCapturePhase) {
+        const captureListener = getListener(instance, registrationName);
+        if (captureListener != null) {
+          listeners.unshift(
+            createDispatchListener(instance, captureListener, currentTarget),
+          );
+        }
+      } else if (!inCapturePhase) {
+        throw new Error('Not implemented yet.');
+      }
+    }
+    instance = instance.return;
+  }
+
+  if (listeners.length !== 0) {
+    dispatchQueue.push({event, listeners});
+  }
+}
+
+function getParent(inst: Fiber | null): Fiber | null {
+  if (inst === null) {
+    return null;
+  }
+  do {
+    // $FlowFixMe[incompatible-use] found when upgrading Flow
+    inst = inst.return;
+    // TODO: If this is a HostRoot we might want to bail out.
+    // That is depending on if we want nested subtrees (layers) to bubble
+    // events to their parent. We could also go through parentNode on the
+    // host node but that wouldn't work for React Native and doesn't let us
+    // do the portal feature.
+  } while (inst && inst.tag !== HostComponent && inst.tag !== HostSingleton);
+  if (inst) {
+    return inst;
+  }
+  return null;
+}
+
+function createDispatchListener(
+  instance: null | Fiber,
+  listener: Function,
+  currentTarget: EventTarget,
+): DispatchListener {
+  return {
+    instance,
+    listener,
+    currentTarget,
+  };
 }

@@ -62,3 +62,47 @@ export function getNearestMountedFiber(fiber: Fiber): null | Fiber {
   // that has been unmounted.
   return null;
 }
+
+/**
+ * Return the lowest common ancestor of A and B, or null if they are in
+ * different trees.
+ */
+export function getLowestCommonAncestor(
+  instA: Fiber,
+  instB: Fiber,
+  getParent: (inst: Fiber | null) => Fiber | null,
+): Fiber | null {
+  let nodeA: null | Fiber = instA;
+  let nodeB: null | Fiber = instB;
+  let depthA = 0;
+  for (let tempA: null | Fiber = nodeA; tempA; tempA = getParent(tempA)) {
+    depthA++;
+  }
+  let depthB = 0;
+  for (let tempB: null | Fiber = nodeB; tempB; tempB = getParent(tempB)) {
+    depthB++;
+  }
+
+  // If A is deeper, crawl up.
+  while (depthA - depthB > 0) {
+    nodeA = getParent(nodeA);
+    depthA--;
+  }
+
+  // If B is deeper, crawl up.
+  while (depthB - depthA > 0) {
+    nodeB = getParent(nodeB);
+    depthB--;
+  }
+
+  // Walk in lockstep until we find a match.
+  let depth = depthA;
+  while (depth--) {
+    if (nodeA === nodeB || (nodeB !== null && nodeA === nodeB.alternate)) {
+      return nodeA;
+    }
+    nodeA = getParent(nodeA);
+    nodeB = getParent(nodeB);
+  }
+  return null;
+}

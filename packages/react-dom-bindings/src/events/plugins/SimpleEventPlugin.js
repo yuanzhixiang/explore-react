@@ -18,7 +18,7 @@ import {
   SyntheticEvent,
   //   SyntheticKeyboardEvent,
   //   SyntheticFocusEvent,
-  //   SyntheticMouseEvent,
+  SyntheticMouseEvent,
   //   SyntheticDragEvent,
   //   SyntheticTouchEvent,
   //   SyntheticAnimationEvent,
@@ -119,9 +119,8 @@ function extractEvents(
     case 'mouseout':
     case 'mouseover':
     case 'contextmenu':
-      // SyntheticEventCtor = SyntheticMouseEvent;
-      // break;
-      throw new Error('Not implemented yet.');
+      SyntheticEventCtor = SyntheticMouseEvent;
+      break;
     case 'drag':
     case 'dragend':
     case 'dragenter':
