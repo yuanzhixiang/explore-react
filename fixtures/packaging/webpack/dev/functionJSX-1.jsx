@@ -11,6 +11,7 @@ function App() {
   return (
     <h1
       onClick={() => {
+        console.log('clicked');
         setCount(count + 1);
       }}>{`Hello World! ${count}`}</h1>
   );

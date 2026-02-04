@@ -43,6 +43,11 @@ function registerEvents() {
   ]);
 }
 
+let activeElement = null;
+let activeElementInst = null;
+let lastSelection = null;
+let mouseDown = false;
+
 /**
  * This plugin creates an `onSelect` event that normalizes select events
  * across form elements.
@@ -90,9 +95,8 @@ function extractEvents(
     // Don't fire the event while the user is dragging. This matches the
     // semantics of the native select event.
     case 'mousedown':
-      // mouseDown = true;
-      // break;
-      throw new Error('Not implemented yet.');
+      mouseDown = true;
+      break;
     case 'contextmenu':
     case 'mouseup':
     case 'dragend':

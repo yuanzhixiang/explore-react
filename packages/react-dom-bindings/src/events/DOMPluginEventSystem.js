@@ -606,10 +606,9 @@ export function accumulateSinglePhaseListeners(
       if (reactEventName !== null) {
         const listener = getListener(instance, reactEventName);
         if (listener != null) {
-          // listeners.push(
-          //   createDispatchListener(instance, listener, lastHostComponent),
-          // );
-          throw new Error('Not implemented yet.');
+          listeners.push(
+            createDispatchListener(instance, listener, lastHostComponent),
+          );
         }
       }
     } else if (
