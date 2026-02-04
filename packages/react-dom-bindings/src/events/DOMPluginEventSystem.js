@@ -69,7 +69,7 @@ import * as ChangeEventPlugin from './plugins/ChangeEventPlugin';
 import * as EnterLeaveEventPlugin from './plugins/EnterLeaveEventPlugin';
 import * as SelectEventPlugin from './plugins/SelectEventPlugin';
 import * as SimpleEventPlugin from './plugins/SimpleEventPlugin';
-// import * as FormActionEventPlugin from './plugins/FormActionEventPlugin';
+import * as FormActionEventPlugin from './plugins/FormActionEventPlugin';
 import * as ScrollEndEventPlugin from './plugins/ScrollEndEventPlugin';
 
 // import reportGlobalError from 'shared/reportGlobalError';
@@ -526,16 +526,15 @@ function extractEvents(
       eventSystemFlags,
       targetContainer,
     );
-    // FormActionEventPlugin.extractEvents(
-    //   dispatchQueue,
-    //   domEventName,
-    //   targetInst,
-    //   nativeEvent,
-    //   nativeEventTarget,
-    //   eventSystemFlags,
-    //   targetContainer,
-    // );
-    throw new Error('Not implemented yet.');
+    FormActionEventPlugin.extractEvents(
+      dispatchQueue,
+      domEventName,
+      targetInst,
+      nativeEvent,
+      nativeEventTarget,
+      eventSystemFlags,
+      targetContainer,
+    );
   }
   if (enableScrollEndPolyfill) {
     throw new Error('Not implemented yet.');

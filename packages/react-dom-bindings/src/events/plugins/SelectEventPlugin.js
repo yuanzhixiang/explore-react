@@ -14,7 +14,7 @@ import type {EventSystemFlags} from '../EventSystemFlags';
 import type {Fiber} from 'react-reconciler/src/ReactInternalTypes';
 import type {ReactSyntheticEvent} from '../ReactSyntheticEventType';
 
-// import {canUseDOM} from 'shared/ExecutionEnvironment';
+import {canUseDOM} from 'shared/ExecutionEnvironment';
 // import {SyntheticEvent} from '../../events/SyntheticEvent';
 // import isTextInputElement from '../isTextInputElement';
 // import shallowEqual from 'shared/shallowEqual';
@@ -26,8 +26,8 @@ import {getNodeFromInstance} from '../../client/ReactDOMComponentTree';
 // import {DOCUMENT_NODE} from '../../client/HTMLNodeType';
 // import {accumulateTwoPhaseListeners} from '../DOMPluginEventSystem';
 
-// const skipSelectionChangeEvent =
-//   canUseDOM && 'documentMode' in document && document.documentMode <= 11;
+const skipSelectionChangeEvent =
+  canUseDOM && 'documentMode' in document && document.documentMode <= 11;
 
 function registerEvents() {
   registerTwoPhaseEvent('onSelect', [
@@ -110,10 +110,9 @@ function extractEvents(
     // key, when multiple keydown events are fired but only one keyup is.
     // This is also our approach for IE handling, for the reason above.
     case 'selectionchange':
-      // if (skipSelectionChangeEvent) {
-      //   break;
-      // }
-      throw new Error('Not implemented yet.');
+      if (skipSelectionChangeEvent) {
+        break;
+      }
     // falls through
     case 'keydown':
     case 'keyup':
