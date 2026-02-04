@@ -91,4 +91,225 @@ function registerEvents() {
 // Track whether we've ever handled a keypress on the space key.
 let hasSpaceKeypress = false;
 
-export {registerEvents};
+/**
+ * Create an `onBeforeInput` event to match
+ * http://www.w3.org/TR/2013/WD-DOM-Level-3-Events-20131105/#events-inputevents.
+ *
+ * This event plugin is based on the native `textInput` event
+ * available in Chrome, Safari, Opera, and IE. This event fires after
+ * `onKeyPress` and `onCompositionEnd`, but before `onInput`.
+ *
+ * `beforeInput` is spec'd but not implemented in any browsers, and
+ * the `input` event does not provide any useful information about what has
+ * actually been added, contrary to the spec. Thus, `textInput` is the best
+ * available event to identify the characters that have actually been inserted
+ * into the target node.
+ *
+ * This plugin is also responsible for emitting `composition` events, thus
+ * allowing us to share composition fallback code for both `beforeInput` and
+ * `composition` event types.
+ */
+function extractEvents(
+  dispatchQueue: DispatchQueue,
+  domEventName: DOMEventName,
+  targetInst: null | Fiber,
+  nativeEvent: AnyNativeEvent,
+  nativeEventTarget: null | EventTarget,
+  eventSystemFlags: EventSystemFlags,
+  targetContainer: EventTarget,
+): void {
+  extractCompositionEvent(
+    dispatchQueue,
+    domEventName,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+  );
+  extractBeforeInputEvent(
+    dispatchQueue,
+    domEventName,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+  );
+}
+
+/**
+ * Check if a composition event was triggered by Korean IME.
+ * Our fallback mode does not work well with IE's Korean IME,
+ * so just use native composition events when Korean IME is used.
+ * Although CompositionEvent.locale property is deprecated,
+ * it is available in IE, where our fallback mode is enabled.
+ *
+ * @param {object} nativeEvent
+ * @return {boolean}
+ */
+function isUsingKoreanIME(nativeEvent: any) {
+  return nativeEvent.locale === 'ko';
+}
+
+// Track the current IME composition status, if any.
+let isComposing = false;
+
+/**
+ * @return {?object} A SyntheticCompositionEvent.
+ */
+function extractCompositionEvent(
+  dispatchQueue: DispatchQueue,
+  domEventName: DOMEventName,
+  targetInst: null | Fiber,
+  nativeEvent: AnyNativeEvent,
+  nativeEventTarget: null | EventTarget,
+) {
+  let eventType;
+  let fallbackData;
+
+  if (canUseCompositionEvent) {
+    eventType = getCompositionEventType(domEventName);
+  } else if (!isComposing) {
+    if (isFallbackCompositionStart(domEventName, nativeEvent)) {
+      eventType = 'onCompositionStart';
+    }
+  } else if (isFallbackCompositionEnd(domEventName, nativeEvent)) {
+    eventType = 'onCompositionEnd';
+  }
+
+  if (!eventType) {
+    return null;
+  }
+
+  throw new Error('Not implemented yet.');
+}
+
+/**
+ * Translate native top level events into event types.
+ */
+function getCompositionEventType(domEventName: DOMEventName) {
+  switch (domEventName) {
+    case 'compositionstart':
+      return 'onCompositionStart';
+    case 'compositionend':
+      return 'onCompositionEnd';
+    case 'compositionupdate':
+      return 'onCompositionUpdate';
+  }
+}
+
+/**
+ * Does our fallback best-guess model think this event signifies that
+ * composition has begun?
+ */
+function isFallbackCompositionStart(
+  domEventName: DOMEventName,
+  nativeEvent: any,
+): boolean {
+  return domEventName === 'keydown' && nativeEvent.keyCode === START_KEYCODE;
+}
+
+/**
+ * Does our fallback mode think that this event is the end of composition?
+ */
+function isFallbackCompositionEnd(
+  domEventName: DOMEventName,
+  nativeEvent: any,
+): boolean {
+  switch (domEventName) {
+    case 'keyup':
+      // Command keys insert or clear IME input.
+      return END_KEYCODES.indexOf(nativeEvent.keyCode) !== -1;
+    case 'keydown':
+      // Expect IME keyCode on each keydown. If we get any other
+      // code we must have exited earlier.
+      return nativeEvent.keyCode !== START_KEYCODE;
+    case 'keypress':
+    case 'mousedown':
+    case 'focusout':
+      // Events are not possible without cancelling IME.
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Extract a SyntheticInputEvent for `beforeInput`, based on either native
+ * `textInput` or fallback behavior.
+ *
+ * @return {?object} A SyntheticInputEvent.
+ */
+function extractBeforeInputEvent(
+  dispatchQueue: DispatchQueue,
+  domEventName: DOMEventName,
+  targetInst: null | Fiber,
+  nativeEvent: AnyNativeEvent,
+  nativeEventTarget: null | EventTarget,
+) {
+  let chars;
+
+  if (canUseTextInputEvent) {
+    chars = getNativeBeforeInputChars(domEventName, nativeEvent);
+  } else {
+    // chars = getFallbackBeforeInputChars(domEventName, nativeEvent);
+    throw new Error('Not implemented yet.');
+  }
+
+  // If no characters are being inserted, no BeforeInput event should
+  // be fired.
+  if (!chars) {
+    return null;
+  }
+
+  throw new Error('Not implemented yet.');
+}
+
+function getNativeBeforeInputChars(
+  domEventName: DOMEventName,
+  nativeEvent: any,
+): ?string {
+  switch (domEventName) {
+    case 'compositionend':
+      // return getDataFromCustomEvent(nativeEvent);
+      throw new Error('Not implemented yet.');
+    case 'keypress':
+      /**
+       * If native `textInput` events are available, our goal is to make
+       * use of them. However, there is a special case: the spacebar key.
+       * In Webkit, preventing default on a spacebar `textInput` event
+       * cancels character insertion, but it *also* causes the browser
+       * to fall back to its default spacebar behavior of scrolling the
+       * page.
+       *
+       * Tracking at:
+       * https://code.google.com/p/chromium/issues/detail?id=355103
+       *
+       * To avoid this issue, use the keypress event as if no `textInput`
+       * event is available.
+       */
+      const which = nativeEvent.which;
+      if (which !== SPACEBAR_CODE) {
+        return null;
+      }
+
+      hasSpaceKeypress = true;
+      return SPACEBAR_CHAR;
+
+    case 'textInput':
+      // Record the characters to be added to the DOM.
+      const chars = nativeEvent.data;
+
+      // If it's a spacebar character, assume that we have already handled
+      // it at the keypress level and bail immediately. Android Chrome
+      // doesn't give us keycodes, so we need to ignore it.
+      if (chars === SPACEBAR_CHAR && hasSpaceKeypress) {
+        return null;
+      }
+
+      return chars;
+
+    default:
+      // For other native event types, do nothing.
+      return null;
+  }
+}
+
+export {registerEvents, extractEvents};

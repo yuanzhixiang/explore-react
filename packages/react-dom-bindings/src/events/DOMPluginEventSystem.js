@@ -508,24 +508,24 @@ function extractEvents(
       eventSystemFlags,
       targetContainer,
     );
-    // SelectEventPlugin.extractEvents(
-    //   dispatchQueue,
-    //   domEventName,
-    //   targetInst,
-    //   nativeEvent,
-    //   nativeEventTarget,
-    //   eventSystemFlags,
-    //   targetContainer,
-    // );
-    // BeforeInputEventPlugin.extractEvents(
-    //   dispatchQueue,
-    //   domEventName,
-    //   targetInst,
-    //   nativeEvent,
-    //   nativeEventTarget,
-    //   eventSystemFlags,
-    //   targetContainer,
-    // );
+    SelectEventPlugin.extractEvents(
+      dispatchQueue,
+      domEventName,
+      targetInst,
+      nativeEvent,
+      nativeEventTarget,
+      eventSystemFlags,
+      targetContainer,
+    );
+    BeforeInputEventPlugin.extractEvents(
+      dispatchQueue,
+      domEventName,
+      targetInst,
+      nativeEvent,
+      nativeEventTarget,
+      eventSystemFlags,
+      targetContainer,
+    );
     // FormActionEventPlugin.extractEvents(
     //   dispatchQueue,
     //   domEventName,
