@@ -29,7 +29,7 @@ import {
   HostSingleton,
   HostText,
 } from 'react-reconciler/src/ReactWorkTags';
-// import {getNearestMountedFiber} from 'react-reconciler/src/ReactFiberTreeReflection';
+import {getNearestMountedFiber} from 'react-reconciler/src/ReactFiberTreeReflection';
 
 function registerEvents() {
   registerDirectEvent('onMouseEnter', ['mouseout', 'mouseover']);
@@ -102,7 +102,19 @@ function extractEvents(
   let from;
   let to;
   if (isOutEvent) {
-    throw new Error('Not implemented yet.');
+    const related = nativeEvent.relatedTarget || (nativeEvent: any).toElement;
+    from = targetInst;
+    to = related ? getClosestInstanceFromNode((related: any)) : null;
+    if (to !== null) {
+      const nearestMounted = getNearestMountedFiber(to);
+      const tag = to.tag;
+      if (
+        to !== nearestMounted ||
+        (tag !== HostComponent && tag !== HostSingleton && tag !== HostText)
+      ) {
+        to = null;
+      }
+    }
   } else {
     // Moving to a node from outside the window.
     from = null;
