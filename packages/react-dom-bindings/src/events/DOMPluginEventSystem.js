@@ -74,7 +74,7 @@ import * as ScrollEndEventPlugin from './plugins/ScrollEndEventPlugin';
 
 // import reportGlobalError from 'shared/reportGlobalError';
 
-// import {runWithFiberInDEV} from 'react-reconciler/src/ReactCurrentFiber';
+import {runWithFiberInDEV} from 'react-reconciler/src/ReactCurrentFiber';
 
 type DispatchListener = {
   instance: null | Fiber,
@@ -440,8 +440,41 @@ function processDispatchQueueItemsInOrder(
   if (inCapturePhase) {
     throw new Error('Not implemented yet.');
   } else {
+    for (let i = 0; i < dispatchListeners.length; i++) {
+      const {instance, currentTarget, listener} = dispatchListeners[i];
+      if (instance !== previousInstance && event.isPropagationStopped()) {
+        return;
+      }
+      if (__DEV__ && instance !== null) {
+        runWithFiberInDEV(
+          instance,
+          executeDispatch,
+          event,
+          listener,
+          currentTarget,
+        );
+      } else {
+        executeDispatch(event, listener, currentTarget);
+      }
+      previousInstance = instance;
+    }
+  }
+}
+
+function executeDispatch(
+  event: ReactSyntheticEvent,
+  listener: Function,
+  currentTarget: EventTarget,
+): void {
+  event.currentTarget = currentTarget;
+  try {
+    listener(event);
+  } catch (error) {
+    // reportGlobalError(error);
+    console.error(error);
     throw new Error('Not implemented yet.');
   }
+  event.currentTarget = null;
 }
 
 function extractEvents(
