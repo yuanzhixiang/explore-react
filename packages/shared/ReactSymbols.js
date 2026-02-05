@@ -70,3 +70,7 @@ export function getIteratorFn(maybeIterable: ?any): ?() => ?Iterator<any> {
 }
 
 export const ASYNC_ITERATOR = Symbol.asyncIterator;
+
+export const REACT_OPTIMISTIC_KEY: ReactOptimisticKey = (Symbol.for(
+  'react.optimistic_key',
+): any);

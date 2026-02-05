@@ -71,3 +71,14 @@ export function resolveFunctionForHotReloading(type: any): any {
     return type;
   }
 }
+
+export function isCompatibleFamilyForHotReloading(
+  fiber: Fiber,
+  element: ReactElement,
+): boolean {
+  if (__DEV__) {
+    throw new Error('Not implemented yet.');
+  } else {
+    return false;
+  }
+}

@@ -19,4 +19,14 @@
 
   // 增加 TypeScript 语言服务的内存限制，不然 vscode 会卡死
   "typescript.tsserver.maxTsServerMemory": 16384,
+
+  // 下面这一段是为了避免监视 fixtures 里的嵌套依赖导致 TS/JS 服务卡死，但也不确定是否有效，先放着吧
+  // "files.watcherExclude": {
+  //   "**/node_modules/**": true,
+  //   "**/.pnpm/**": true,
+  //   "build/**": true,
+  //   "dist/**": true,
+  //   "fixtures/**": true,
+  //   "fixtures/**/node_modules/**": true,
+  // },
 }

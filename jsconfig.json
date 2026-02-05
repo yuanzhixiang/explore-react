@@ -10,12 +10,26 @@
       "react-reconciler/*": ["packages/react-reconciler/*"],
       "react-client/*": ["packages/react-client/*"],
       "react-dom-bindings/*": ["packages/react-dom-bindings/*"],
-      "react-server/*": ["packages/react-server/*"]
+      "react-server/*": ["packages/react-server/*"],
     },
     "moduleResolution": "node",
     "target": "ESNext",
     "allowJs": true,
-    "checkJs": false
+    "checkJs": false,
   },
-  "include": ["packages/**/*", "fixtures/**/*"]
+  "include": [
+    "packages/**/*",
+    // 有这个可能会导致 typescript server 卡死，所以注释掉
+    //  "fixtures/**/*"
+  ],
+
+  // 下面这段配置也是为了防止 typescript server 卡死，但不确定是否有效，先放着吧
+  // "exclude": [
+  //   "**/node_modules/**",
+  //   "**/.pnpm/**",
+  //   "build/**",
+  //   "dist/**",
+  //   "fixtures/**",
+  //   "fixtures/**/node_modules/**",
+  // ],
 }

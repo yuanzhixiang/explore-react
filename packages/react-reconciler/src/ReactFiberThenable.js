@@ -15,6 +15,18 @@ import type {
   ReactIOInfo,
 } from 'shared/ReactTypes';
 
+import type {LazyComponent as LazyComponentType} from 'react/src/ReactLazy';
+
+// import {callLazyInitInDEV} from './ReactFiberCallUserSpace';
+
+import {getWorkInProgressRoot} from './ReactFiberWorkLoop';
+
+import ReactSharedInternals from 'shared/ReactSharedInternals';
+
+import {enableAsyncDebugInfo} from 'shared/ReactFeatureFlags';
+
+import noop from 'shared/noop';
+
 opaque type ThenableStateDev = {
   didWarnAboutUncachedPromise: boolean,
   thenables: Array<Thenable<any>>,
@@ -49,3 +61,26 @@ export const SuspenseActionException: mixed = new Error(
     'unexpected behavior.\n\n' +
     'To handle async errors, wrap your component in an error boundary.',
 );
+
+export function resolveLazy<T>(lazyType: LazyComponentType<T, any>): T {
+  try {
+    if (__DEV__) {
+      // return callLazyInitInDEV(lazyType);
+      throw new Error('Not implemented yet.');
+    }
+    const payload = lazyType._payload;
+    const init = lazyType._init;
+    return init(payload);
+  } catch (x) {
+    if (x !== null && typeof x === 'object' && typeof x.then === 'function') {
+      // This lazy Suspended. Treat this as if we called use() to unwrap it.
+      // suspendedThenable = x;
+      // if (__DEV__) {
+      //   needsToResetSuspendedThenableDEV = true;
+      // }
+      // throw SuspenseException;
+      throw new Error('Not implemented yet.');
+    }
+    throw x;
+  }
+}
