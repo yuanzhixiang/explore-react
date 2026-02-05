@@ -112,7 +112,7 @@ import {
 } from './ReactFiberWorkLoop';
 
 import getComponentNameFromFiber from 'react-reconciler/src/getComponentNameFromFiber';
-// import is from 'shared/objectIs';
+import is from 'shared/objectIs';
 // import isArray from 'shared/isArray';
 // import {
 //   markWorkInProgressReceivedUpdate,
@@ -136,11 +136,11 @@ import {
   enqueueUpdate as enqueueLegacyQueueUpdate,
   entangleTransitions as entangleLegacyQueueTransitions,
 } from './ReactFiberClassUpdateQueue';
-// import {
-//   enqueueConcurrentHookUpdate,
-//   enqueueConcurrentHookUpdateAndEagerlyBailout,
-//   enqueueConcurrentRenderForLane,
-// } from './ReactFiberConcurrentUpdates';
+import {
+  enqueueConcurrentHookUpdate,
+  // enqueueConcurrentHookUpdateAndEagerlyBailout,
+  // enqueueConcurrentRenderForLane,
+} from './ReactFiberConcurrentUpdates';
 // import {getTreeId} from './ReactFiberTreeContext';
 import {now} from './Scheduler';
 // import {
@@ -658,7 +658,132 @@ function dispatchSetState<S, A>(
     }
   }
 
-  throw new Error('Not implemented yet.');
+  const lane = requestUpdateLane(fiber);
+  const didScheduleUpdate = dispatchSetStateInternal(
+    fiber,
+    queue,
+    action,
+    lane,
+  );
+  if (didScheduleUpdate) {
+    startUpdateTimerByLane(lane, 'setState()', fiber);
+  }
+  markUpdateInDevTools(fiber, lane, action);
+}
+
+function markUpdateInDevTools<A>(fiber: Fiber, lane: Lane, action: A): void {
+  if (enableSchedulingProfiler) {
+    // markStateUpdateScheduled(fiber, lane);
+    throw new Error('Not implemented yet.');
+  }
+}
+
+function dispatchSetStateInternal<S, A>(
+  fiber: Fiber,
+  queue: UpdateQueue<S, A>,
+  action: A,
+  lane: Lane,
+): boolean {
+  const update: Update<S, A> = {
+    lane,
+    revertLane: NoLane,
+    gesture: null,
+    action,
+    hasEagerState: false,
+    eagerState: null,
+    next: (null: any),
+  };
+
+  if (isRenderPhaseUpdate(fiber)) {
+    // enqueueRenderPhaseUpdate(queue, update);
+    throw new Error('Not implemented yet.');
+  } else {
+    const alternate = fiber.alternate;
+    if (
+      fiber.lanes === NoLanes &&
+      (alternate === null || alternate.lanes === NoLanes)
+    ) {
+      // The queue is currently empty, which means we can eagerly compute the
+      // next state before entering the render phase. If the new state is the
+      // same as the current state, we may be able to bail out entirely.
+      const lastRenderedReducer = queue.lastRenderedReducer;
+      if (lastRenderedReducer !== null) {
+        let prevDispatcher = null;
+        if (__DEV__) {
+          prevDispatcher = ReactSharedInternals.H;
+          ReactSharedInternals.H = InvalidNestedHooksDispatcherOnUpdateInDEV;
+        }
+        try {
+          const currentState: S = (queue.lastRenderedState: any);
+          const eagerState = lastRenderedReducer(currentState, action);
+          // Stash the eagerly computed state, and the reducer used to compute
+          // it, on the update object. If the reducer hasn't changed by the
+          // time we enter the render phase, then the eager state can be used
+          // without calling the reducer again.
+          update.hasEagerState = true;
+          update.eagerState = eagerState;
+          if (is(eagerState, currentState)) {
+            // Fast path. We can bail out without scheduling React to re-render.
+            // It's still possible that we'll need to rebase this update later,
+            // if the component re-renders for a different reason and by that
+            // time the reducer has changed.
+            // TODO: Do we still need to entangle transitions in this case?
+            // enqueueConcurrentHookUpdateAndEagerlyBailout(fiber, queue, update);
+            // return false;
+            throw new Error('Not implemented yet.');
+          }
+        } catch (error) {
+          // Suppress the error. It will throw again in the render phase.
+        } finally {
+          if (__DEV__) {
+            ReactSharedInternals.H = prevDispatcher;
+          }
+        }
+      }
+    }
+
+    const root = enqueueConcurrentHookUpdate(fiber, queue, update, lane);
+    if (root !== null) {
+      scheduleUpdateOnFiber(root, fiber, lane);
+      entangleTransitionUpdate(root, queue, lane);
+      return true;
+    }
+  }
+  return false;
+}
+
+// TODO: Move to ReactFiberConcurrentUpdates?
+function entangleTransitionUpdate<S, A>(
+  root: FiberRoot,
+  queue: UpdateQueue<S, A>,
+  lane: Lane,
+): void {
+  if (isTransitionLane(lane)) {
+    let queueLanes = queue.lanes;
+
+    // If any entangled lanes are no longer pending on the root, then they
+    // must have finished. We can remove them from the shared queue, which
+    // represents a superset of the actually pending lanes. In some cases we
+    // may entangle more than we need to, but that's OK. In fact it's worse if
+    // we *don't* entangle when we should.
+    queueLanes = intersectLanes(queueLanes, root.pendingLanes);
+
+    // Entangle the new transition lane with the other transition lanes.
+    const newQueueLanes = mergeLanes(queueLanes, lane);
+    queue.lanes = newQueueLanes;
+    // Even if queue.lanes already include lane, we don't know for certain if
+    // the lane finished since the last time we entangled it. So we need to
+    // entangle it again, just to be sure.
+    markRootEntangled(root, newQueueLanes);
+  }
+}
+
+function isRenderPhaseUpdate(fiber: Fiber): boolean {
+  const alternate = fiber.alternate;
+  return (
+    fiber === currentlyRenderingFiber ||
+    (alternate !== null && alternate === currentlyRenderingFiber)
+  );
 }
 
 function mountState<S>(

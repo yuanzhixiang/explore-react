@@ -107,9 +107,42 @@ function markUpdateLaneFromFiberToRoot(
   let isHidden = false;
   let parent = sourceFiber.return;
   let node = sourceFiber;
-
   while (parent !== null) {
-    throw new Error('Not implemented yet.');
+    parent.childLanes = mergeLanes(parent.childLanes, lane);
+    alternate = parent.alternate;
+    if (alternate !== null) {
+      alternate.childLanes = mergeLanes(alternate.childLanes, lane);
+    }
+
+    if (parent.tag === OffscreenComponent) {
+      // Check if this offscreen boundary is currently hidden.
+      //
+      // The instance may be null if the Offscreen parent was unmounted. Usually
+      // the parent wouldn't be reachable in that case because we disconnect
+      // fibers from the tree when they are deleted. However, there's a weird
+      // edge case where setState is called on a fiber that was interrupted
+      // before it ever mounted. Because it never mounts, it also never gets
+      // deleted. Because it never gets deleted, its return pointer never gets
+      // disconnected. Which means it may be attached to a deleted Offscreen
+      // parent node. (This discovery suggests it may be better for memory usage
+      // if we don't attach the `return` pointer until the commit phase, though
+      // in order to do that we'd need some other way to track the return
+      // pointer during the initial render, like on the stack.)
+      //
+      // This case is always accompanied by a warning, but we still need to
+      // account for it. (There may be other cases that we haven't discovered,
+      // too.)
+      const offscreenInstance: OffscreenInstance | null = parent.stateNode;
+      if (
+        offscreenInstance !== null &&
+        !(offscreenInstance._visibility & OffscreenVisible)
+      ) {
+        isHidden = true;
+      }
+    }
+
+    node = parent;
+    parent = parent.return;
   }
 
   if (node.tag === HostRoot) {
@@ -246,4 +279,16 @@ function detectUpdateOnUnmountedFiber(sourceFiber: Fiber, parent: Fiber) {
       throw new Error('Not implemented');
     }
   }
+}
+
+export function enqueueConcurrentHookUpdate<S, A>(
+  fiber: Fiber,
+  queue: HookQueue<S, A>,
+  update: HookUpdate<S, A>,
+  lane: Lane,
+): FiberRoot | null {
+  const concurrentQueue: ConcurrentQueue = (queue: any);
+  const concurrentUpdate: ConcurrentUpdate = (update: any);
+  enqueueUpdate(fiber, concurrentQueue, concurrentUpdate, lane);
+  return getRootForUpdatedFiber(fiber);
 }

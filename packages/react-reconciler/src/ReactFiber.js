@@ -364,7 +364,32 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
     workInProgress.alternate = current;
     current.alternate = workInProgress;
   } else {
-    throw new Error('Not implemented yet.');
+    workInProgress.pendingProps = pendingProps;
+    // Needed because Blocks store data on type.
+    workInProgress.type = current.type;
+
+    // We already have an alternate.
+    // Reset the effect tag.
+    workInProgress.flags = NoFlags;
+
+    // The effects are no longer valid.
+    workInProgress.subtreeFlags = NoFlags;
+    workInProgress.deletions = null;
+
+    if (enableOptimisticKey) {
+      // For optimistic keys, the Fibers can have different keys if one is optimistic
+      // and the other one is filled in.
+      workInProgress.key = current.key;
+    }
+
+    if (enableProfilerTimer) {
+      // We intentionally reset, rather than copy, actualDuration & actualStartTime.
+      // This prevents time from endlessly accumulating in new commits.
+      // This has the downside of resetting values for different priority renders,
+      // But works for yielding (the common case) and should support resuming.
+      workInProgress.actualDuration = -0;
+      workInProgress.actualStartTime = -1.1;
+    }
   }
 
   // Reset all effects except static ones.

@@ -40,7 +40,7 @@ import {
   CommitContext,
   NoContext,
   RenderContext,
-  // flushPendingEffects,
+  flushPendingEffects,
   flushPendingEffectsDelayed,
   getExecutionContext,
   getWorkInProgressRoot,
@@ -423,7 +423,14 @@ function scheduleTaskForRootDuringMicrotask(
     // the main thread.
     !checkIfRootIsPrerendering(root, nextLanes)
   ) {
-    throw new Error('Not implemented');
+    // Synchronous work is always flushed at the end of the microtask, so we
+    // don't need to schedule an additional task.
+    if (existingCallbackNode !== null) {
+      cancelCallback(existingCallbackNode);
+    }
+    root.callbackPriority = SyncLane;
+    root.callbackNode = null;
+    return SyncLane;
   } else {
     // We use the highest priority lane to represent the priority of the callback.
     const existingCallbackPriority = root.callbackPriority;
@@ -674,8 +681,7 @@ function flushSyncWorkAcrossRoots_impl(
           ) {
             // This root has pending sync work. Flush it now.
             didPerformSomeWork = true;
-            // performSyncWorkOnRoot(root, nextLanes);
-            throw new Error('Not implemented yet');
+            performSyncWorkOnRoot(root, nextLanes);
           }
         }
       }
@@ -683,6 +689,22 @@ function flushSyncWorkAcrossRoots_impl(
     }
   } while (didPerformSomeWork);
   isFlushingWork = false;
+}
+
+function performSyncWorkOnRoot(root: FiberRoot, lanes: Lanes) {
+  // This is the entry point for synchronous tasks that don't go
+  // through Scheduler.
+  const didFlushPassiveEffects = flushPendingEffects();
+  if (didFlushPassiveEffects) {
+    // If passive effects were flushed, exit to the outer work loop in the root
+    // scheduler, so we can recompute the priority.
+    return null;
+  }
+  if (enableProfilerTimer && enableProfilerNestedUpdatePhase) {
+    syncNestedUpdateFlag();
+  }
+  const forceSync = true;
+  performWorkOnRoot(root, lanes, forceSync);
 }
 
 export function flushSyncWorkOnAllRoots() {
