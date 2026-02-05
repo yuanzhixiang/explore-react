@@ -437,9 +437,8 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
     switch (workInProgress.tag) {
       case FunctionComponent:
       case SimpleMemoComponent:
-        // workInProgress.type = resolveFunctionForHotReloading(current.type);
-        // break;
-        throw new Error('Not implemented yet.');
+        workInProgress.type = resolveFunctionForHotReloading(current.type);
+        break;
       case ClassComponent:
         // workInProgress.type = resolveClassForHotReloading(current.type);
         // break;

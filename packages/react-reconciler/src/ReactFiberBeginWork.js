@@ -139,7 +139,7 @@ import {
 import {
   mountChildFibers,
   reconcileChildFibers,
-  // cloneChildFibers,
+  cloneChildFibers,
   // validateSuspenseListChildren,
 } from './ReactChildFiber';
 import {
@@ -214,7 +214,7 @@ import {
   //   propagateContextChange,
   //   lazilyPropagateParentContextChanges,
   //   propagateParentContextChangesToDeferredTree,
-  //   checkIfContextChanged,
+  checkIfContextChanged,
   //   readContext,
   prepareToReadContext,
   //   scheduleContextWorkOnParentPath,
@@ -265,14 +265,14 @@ import {
   // isSimpleFunctionComponent,
   // isFunctionClassComponent,
 } from './ReactFiber';
-// import {
-//   scheduleUpdateOnFiber,
-//   renderDidSuspendDelayIfPossible,
-//   markSkippedUpdateLanes,
-//   markRenderDerivedCause,
-//   getWorkInProgressRoot,
-//   peekDeferredLane,
-// } from './ReactFiberWorkLoop';
+import {
+  // scheduleUpdateOnFiber,
+  // renderDidSuspendDelayIfPossible,
+  markSkippedUpdateLanes,
+  // markRenderDerivedCause,
+  // getWorkInProgressRoot,
+  // peekDeferredLane,
+} from './ReactFiberWorkLoop';
 // import {enqueueConcurrentRenderForLane} from './ReactFiberConcurrentUpdates';
 import {pushCacheProvider, CacheContext} from './ReactFiberCacheComponent';
 // import {
@@ -397,7 +397,42 @@ function bailoutOnAlreadyFinishedWork(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ): Fiber | null {
-  throw new Error('Not implemented yet.');
+  if (current !== null) {
+    // Reuse previous dependencies
+    workInProgress.dependencies = current.dependencies;
+  }
+
+  if (enableProfilerTimer) {
+    // Don't update "base" render times for bailouts.
+    // stopProfilerTimerIfRunning(workInProgress);
+    throw new Error('Not implemented yet.');
+  }
+
+  markSkippedUpdateLanes(workInProgress.lanes);
+
+  // Check if the children have any pending work.
+  if (!includesSomeLane(renderLanes, workInProgress.childLanes)) {
+    // The children don't have any work either. We can skip them.
+    // TODO: Once we add back resuming, we should check if the children are
+    // a work-in-progress set. If so, we need to transfer their effects.
+
+    if (current !== null) {
+      // Before bailing out, check if there are any context changes in
+      // the children.
+      // lazilyPropagateParentContextChanges(current, workInProgress, renderLanes);
+      // if (!includesSomeLane(renderLanes, workInProgress.childLanes)) {
+      //   return null;
+      // }
+      throw new Error('Not implemented yet.');
+    } else {
+      return null;
+    }
+  }
+
+  // This fiber doesn't have work, but its subtree does. Clone the child
+  // fibers and continue.
+  cloneChildFibers(current, workInProgress);
+  return workInProgress.child;
 }
 
 export function reconcileChildren(
@@ -501,7 +536,13 @@ function beginWork(
         // may not be work scheduled on `current`, so we check for this flag.
         (workInProgress.flags & DidCapture) === NoFlags
       ) {
-        throw new Error('Not implemented yet.');
+        // No pending updates or context. Bail out now.
+        didReceiveUpdate = false;
+        return attemptEarlyBailoutIfNoScheduledUpdate(
+          current,
+          workInProgress,
+          renderLanes,
+        );
       }
 
       if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
@@ -637,6 +678,268 @@ function beginWork(
   );
 }
 
+function attemptEarlyBailoutIfNoScheduledUpdate(
+  current: Fiber,
+  workInProgress: Fiber,
+  renderLanes: Lanes,
+) {
+  // This fiber does not have any pending work. Bailout without entering
+  // the begin phase. There's still some bookkeeping we that needs to be done
+  // in this optimized path, mostly pushing stuff onto the stack.
+  switch (workInProgress.tag) {
+    case HostRoot: {
+      pushHostRootContext(workInProgress);
+      const root: FiberRoot = workInProgress.stateNode;
+      pushRootTransition(workInProgress, root, renderLanes);
+
+      if (enableTransitionTracing) {
+        pushRootMarkerInstance(workInProgress);
+      }
+
+      const cache: Cache = current.memoizedState.cache;
+      pushCacheProvider(workInProgress, cache);
+      resetHydrationState();
+      break;
+    }
+    case HostSingleton:
+    case HostComponent:
+      pushHostContext(workInProgress);
+      break;
+    case ClassComponent: {
+      // const Component = workInProgress.type;
+      // if (isLegacyContextProvider(Component)) {
+      //   pushLegacyContextProvider(workInProgress);
+      // }
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case HostPortal:
+      pushHostContainer(workInProgress, workInProgress.stateNode.containerInfo);
+      break;
+    case ContextProvider: {
+      // const newValue = workInProgress.memoizedProps.value;
+      // const context: ReactContext<any> = workInProgress.type;
+      // pushProvider(workInProgress, context, newValue);
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case Profiler:
+      if (enableProfilerTimer) {
+        // Profiler should only call onRender when one of its descendants actually rendered.
+        const hasChildWork = includesSomeLane(
+          renderLanes,
+          workInProgress.childLanes,
+        );
+        if (hasChildWork) {
+          workInProgress.flags |= Update;
+        }
+
+        if (enableProfilerCommitHooks) {
+          // Schedule a passive effect for this Profiler to call onPostCommit hooks.
+          // This effect should be scheduled even if there is no onPostCommit callback for this Profiler,
+          // because the effect is also where times bubble to parent Profilers.
+          workInProgress.flags |= Passive;
+          // Reset effect durations for the next eventual effect phase.
+          // These are reset during render to allow the DevTools commit hook a chance to read them,
+          const stateNode = workInProgress.stateNode;
+          stateNode.effectDuration = -0;
+          stateNode.passiveEffectDuration = -0;
+        }
+      }
+      break;
+    case ActivityComponent: {
+      // const state: ActivityState | null = workInProgress.memoizedState;
+      // if (state !== null) {
+      //   // We're dehydrated so we're not going to render the children. This is just
+      //   // to maintain push/pop symmetry.
+      //   // We know that this component will suspend again because if it has
+      //   // been unsuspended it has committed as a hydrated Activity component.
+      //   // If it needs to be retried, it should have work scheduled on it.
+      //   workInProgress.flags |= DidCapture;
+      //   pushDehydratedActivitySuspenseHandler(workInProgress);
+      //   return null;
+      // }
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case SuspenseComponent: {
+      // const state: SuspenseState | null = workInProgress.memoizedState;
+      // if (state !== null) {
+      //   if (state.dehydrated !== null) {
+      //     // We're not going to render the children, so this is just to maintain
+      //     // push/pop symmetry
+      //     pushPrimaryTreeSuspenseHandler(workInProgress);
+      //     // We know that this component will suspend again because if it has
+      //     // been unsuspended it has committed as a resolved Suspense component.
+      //     // If it needs to be retried, it should have work scheduled on it.
+      //     workInProgress.flags |= DidCapture;
+      //     // We should never render the children of a dehydrated boundary until we
+      //     // upgrade it. We return null instead of bailoutOnAlreadyFinishedWork.
+      //     return null;
+      //   }
+
+      //   // If this boundary is currently timed out, we need to decide
+      //   // whether to retry the primary children, or to skip over it and
+      //   // go straight to the fallback. Check the priority of the primary
+      //   // child fragment.
+      //   const primaryChildFragment: Fiber = (workInProgress.child: any);
+      //   const primaryChildLanes = primaryChildFragment.childLanes;
+      //   if (includesSomeLane(renderLanes, primaryChildLanes)) {
+      //     // The primary children have pending work. Use the normal path
+      //     // to attempt to render the primary children again.
+      //     return updateSuspenseComponent(current, workInProgress, renderLanes);
+      //   } else {
+      //     // The primary child fragment does not have pending work marked
+      //     // on it
+      //     pushPrimaryTreeSuspenseHandler(workInProgress);
+      //     // The primary children do not have pending work with sufficient
+      //     // priority. Bailout.
+      //     const child = bailoutOnAlreadyFinishedWork(
+      //       current,
+      //       workInProgress,
+      //       renderLanes,
+      //     );
+      //     if (child !== null) {
+      //       // The fallback children have pending work. Skip over the
+      //       // primary children and work on the fallback.
+      //       return child.sibling;
+      //     } else {
+      //       // Note: We can return `null` here because we already checked
+      //       // whether there were nested context consumers, via the call to
+      //       // `bailoutOnAlreadyFinishedWork` above.
+      //       return null;
+      //     }
+      //   }
+      // } else {
+      //   pushPrimaryTreeSuspenseHandler(workInProgress);
+      // }
+      // break;
+      throw new Error('Not implemented yet.');
+    }
+    case SuspenseListComponent: {
+      // if (workInProgress.flags & DidCapture) {
+      //   // Second pass caught.
+      //   return updateSuspenseListComponent(
+      //     current,
+      //     workInProgress,
+      //     renderLanes,
+      //   );
+      // }
+      // const didSuspendBefore = (current.flags & DidCapture) !== NoFlags;
+
+      // let hasChildWork = includesSomeLane(
+      //   renderLanes,
+      //   workInProgress.childLanes,
+      // );
+
+      // if (!hasChildWork) {
+      //   // Context changes may not have been propagated yet. We need to do
+      //   // that now, before we can decide whether to bail out.
+      //   // TODO: We use `childLanes` as a heuristic for whether there is
+      //   // remaining work in a few places, including
+      //   // `bailoutOnAlreadyFinishedWork` and
+      //   // `updateDehydratedSuspenseComponent`. We should maybe extract this
+      //   // into a dedicated function.
+      //   lazilyPropagateParentContextChanges(
+      //     current,
+      //     workInProgress,
+      //     renderLanes,
+      //   );
+      //   hasChildWork = includesSomeLane(renderLanes, workInProgress.childLanes);
+      // }
+
+      // if (didSuspendBefore) {
+      //   if (hasChildWork) {
+      //     // If something was in fallback state last time, and we have all the
+      //     // same children then we're still in progressive loading state.
+      //     // Something might get unblocked by state updates or retries in the
+      //     // tree which will affect the tail. So we need to use the normal
+      //     // path to compute the correct tail.
+      //     return updateSuspenseListComponent(
+      //       current,
+      //       workInProgress,
+      //       renderLanes,
+      //     );
+      //   }
+      //   // If none of the children had any work, that means that none of
+      //   // them got retried so they'll still be blocked in the same way
+      //   // as before. We can fast bail out.
+      //   workInProgress.flags |= DidCapture;
+      // }
+
+      // // If nothing suspended before and we're rendering the same children,
+      // // then the tail doesn't matter. Anything new that suspends will work
+      // // in the "together" mode, so we can continue from the state we had.
+      // const renderState = workInProgress.memoizedState;
+      // if (renderState !== null) {
+      //   // Reset to the "together" mode in case we've started a different
+      //   // update in the past but didn't complete it.
+      //   renderState.rendering = null;
+      //   renderState.tail = null;
+      //   renderState.lastEffect = null;
+      // }
+      // pushSuspenseListContext(workInProgress, suspenseStackCursor.current);
+
+      // if (hasChildWork) {
+      //   break;
+      // } else {
+      //   // If none of the children had any work, that means that none of
+      //   // them got retried so they'll still be blocked in the same way
+      //   // as before. We can fast bail out.
+      //   return null;
+      // }
+      throw new Error('Not implemented yet.');
+    }
+    case OffscreenComponent: {
+      // Need to check if the tree still needs to be deferred. This is
+      // almost identical to the logic used in the normal update path,
+      // so we'll just enter that. The only difference is we'll bail out
+      // at the next level instead of this one, because the child props
+      // have not changed. Which is fine.
+      // TODO: Probably should refactor `beginWork` to split the bailout
+      // path from the normal path. I'm tempted to do a labeled break here
+      // but I won't :)
+      // workInProgress.lanes = NoLanes;
+      // return updateOffscreenComponent(
+      //   current,
+      //   workInProgress,
+      //   renderLanes,
+      //   workInProgress.pendingProps,
+      // );
+      throw new Error('Not implemented yet.');
+    }
+    case CacheComponent: {
+      const cache: Cache = current.memoizedState.cache;
+      pushCacheProvider(workInProgress, cache);
+      break;
+    }
+    case TracingMarkerComponent: {
+      // if (enableTransitionTracing) {
+      //   const instance: TracingMarkerInstance | null = workInProgress.stateNode;
+      //   if (instance !== null) {
+      //     pushMarkerInstance(workInProgress, instance);
+      //   }
+      //   break;
+      // }
+      throw new Error('Not implemented yet.');
+      // Fallthrough
+    }
+    case LegacyHiddenComponent: {
+      // if (enableLegacyHidden) {
+      //   workInProgress.lanes = NoLanes;
+      //   return updateLegacyHiddenComponent(
+      //     current,
+      //     workInProgress,
+      //     renderLanes,
+      //   );
+      // }
+      throw new Error('Not implemented yet.');
+      // Fallthrough
+    }
+  }
+  return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
+}
+
 function updateFunctionComponent(
   current: null | Fiber,
   workInProgress: Fiber,
@@ -769,7 +1072,13 @@ function checkScheduledUpdateOrContext(
   if (includesSomeLane(updateLanes, renderLanes)) {
     return true;
   }
-  throw new Error('Not implemented yet.');
+  // No pending update, but because context is propagated lazily, we need
+  // to check for a context change before we bail out.
+  const dependencies = current.dependencies;
+  if (dependencies !== null && checkIfContextChanged(dependencies)) {
+    return true;
+  }
+  return false;
 }
 
 export {beginWork};

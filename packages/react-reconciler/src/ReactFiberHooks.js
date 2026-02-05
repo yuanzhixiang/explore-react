@@ -951,7 +951,193 @@ function updateReducer<S, I, A>(
   initialArg: I,
   init?: I => S,
 ): [S, Dispatch<A>] {
-  throw new Error('Not implemented yet.');
+  const hook = updateWorkInProgressHook();
+  return updateReducerImpl(hook, ((currentHook: any): Hook), reducer);
+}
+
+function updateReducerImpl<S, A>(
+  hook: Hook,
+  current: Hook,
+  reducer: (S, A) => S,
+): [S, Dispatch<A>] {
+  const queue = hook.queue;
+
+  if (queue === null) {
+    throw new Error(
+      'Should have a queue. You are likely calling Hooks conditionally, ' +
+        'which is not allowed. (https://react.dev/link/invalid-hook-call)',
+    );
+  }
+
+  queue.lastRenderedReducer = reducer;
+
+  // The last rebase update that is NOT part of the base state.
+  let baseQueue = hook.baseQueue;
+
+  // The last pending update that hasn't been processed yet.
+  const pendingQueue = queue.pending;
+  if (pendingQueue !== null) {
+    // We have new updates that haven't been processed yet.
+    // We'll add them to the base queue.
+    if (baseQueue !== null) {
+      // Merge the pending queue and the base queue.
+      const baseFirst = baseQueue.next;
+      const pendingFirst = pendingQueue.next;
+      baseQueue.next = pendingFirst;
+      pendingQueue.next = baseFirst;
+    }
+    if (__DEV__) {
+      if (current.baseQueue !== baseQueue) {
+        // Internal invariant that should never happen, but feasibly could in
+        // the future if we implement resuming, or some form of that.
+        console.error(
+          'Internal error: Expected work-in-progress queue to be a clone. ' +
+            'This is a bug in React.',
+        );
+      }
+    }
+    current.baseQueue = baseQueue = pendingQueue;
+    queue.pending = null;
+  }
+
+  const baseState = hook.baseState;
+  if (baseQueue === null) {
+    // If there are no pending updates, then the memoized state should be the
+    // same as the base state. Currently these only diverge in the case of
+    // useOptimistic, because useOptimistic accepts a new baseState on
+    // every render.
+    hook.memoizedState = baseState;
+    // We don't need to call markWorkInProgressReceivedUpdate because
+    // baseState is derived from other reactive values.
+  } else {
+    // We have a queue to process.
+    const first = baseQueue.next;
+    let newState = baseState;
+
+    let newBaseState = null;
+    let newBaseQueueFirst = null;
+    let newBaseQueueLast: Update<S, A> | null = null;
+    let update = first;
+    let didReadFromEntangledAsyncAction = false;
+    do {
+      throw new Error('Not implemented yet.');
+    } while (update !== null && update !== first);
+
+    if (newBaseQueueLast === null) {
+      newBaseState = newState;
+    } else {
+      newBaseQueueLast.next = (newBaseQueueFirst: any);
+    }
+
+    // Mark that the fiber performed work, but only if the new state is
+    // different from the current state.
+    if (!is(newState, hook.memoizedState)) {
+      // markWorkInProgressReceivedUpdate();
+
+      // // Check if this update is part of a pending async action. If so, we'll
+      // // need to suspend until the action has finished, so that it's batched
+      // // together with future updates in the same action.
+      // // TODO: Once we support hooks inside useMemo (or an equivalent
+      // // memoization boundary like Forget), hoist this logic so that it only
+      // // suspends if the memo boundary produces a new value.
+      // if (didReadFromEntangledAsyncAction) {
+      //   const entangledActionThenable = peekEntangledActionThenable();
+      //   if (entangledActionThenable !== null) {
+      //     // TODO: Instead of the throwing the thenable directly, throw a
+      //     // special object like `use` does so we can detect if it's captured
+      //     // by userspace.
+      //     throw entangledActionThenable;
+      //   }
+      // }
+      throw new Error('Not implemented yet.');
+    }
+
+    hook.memoizedState = newState;
+    hook.baseState = newBaseState;
+    hook.baseQueue = newBaseQueueLast;
+
+    queue.lastRenderedState = newState;
+    throw new Error('Not implemented yet.');
+  }
+  if (baseQueue === null) {
+    // `queue.lanes` is used for entangling transitions. We can set it back to
+    // zero once the queue is empty.
+    queue.lanes = NoLanes;
+  }
+
+  const dispatch: Dispatch<A> = (queue.dispatch: any);
+  return [hook.memoizedState, dispatch];
+}
+
+function updateWorkInProgressHook(): Hook {
+  // This function is used both for updates and for re-renders triggered by a
+  // render phase update. It assumes there is either a current hook we can
+  // clone, or a work-in-progress hook from a previous render pass that we can
+  // use as a base.
+  let nextCurrentHook: null | Hook;
+  if (currentHook === null) {
+    const current = currentlyRenderingFiber.alternate;
+    if (current !== null) {
+      nextCurrentHook = current.memoizedState;
+    } else {
+      nextCurrentHook = null;
+    }
+  } else {
+    nextCurrentHook = currentHook.next;
+  }
+
+  let nextWorkInProgressHook: null | Hook;
+  if (workInProgressHook === null) {
+    nextWorkInProgressHook = currentlyRenderingFiber.memoizedState;
+  } else {
+    nextWorkInProgressHook = workInProgressHook.next;
+  }
+
+  if (nextWorkInProgressHook !== null) {
+    // There's already a work-in-progress. Reuse it.
+    workInProgressHook = nextWorkInProgressHook;
+    nextWorkInProgressHook = workInProgressHook.next;
+
+    currentHook = nextCurrentHook;
+  } else {
+    // Clone from the current hook.
+
+    if (nextCurrentHook === null) {
+      const currentFiber = currentlyRenderingFiber.alternate;
+      if (currentFiber === null) {
+        // This is the initial render. This branch is reached when the component
+        // suspends, resumes, then renders an additional hook.
+        // Should never be reached because we should switch to the mount dispatcher first.
+        throw new Error(
+          'Update hook called on initial render. This is likely a bug in React. Please file an issue.',
+        );
+      } else {
+        // This is an update. We should always have a current hook.
+        throw new Error('Rendered more hooks than during the previous render.');
+      }
+    }
+
+    currentHook = nextCurrentHook;
+
+    const newHook: Hook = {
+      memoizedState: currentHook.memoizedState,
+
+      baseState: currentHook.baseState,
+      baseQueue: currentHook.baseQueue,
+      queue: currentHook.queue,
+
+      next: null,
+    };
+
+    if (workInProgressHook === null) {
+      // This is the first hook in the list.
+      currentlyRenderingFiber.memoizedState = workInProgressHook = newHook;
+    } else {
+      // Append to the end of the list.
+      workInProgressHook = workInProgressHook.next = newHook;
+    }
+  }
+  return workInProgressHook;
 }
 
 function updateRef<T>(initialValue: T): {current: T} {
@@ -961,7 +1147,7 @@ function updateRef<T>(initialValue: T): {current: T} {
 function updateState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
-  throw new Error('Not implemented yet.');
+  return updateReducer(basicStateReducer, initialState);
 }
 
 function updateTransition(): [
@@ -1042,6 +1228,19 @@ function rerenderOptimistic<S, A>(
   reducer: ?(S, A) => S,
 ): [S, (A) => void] {
   throw new Error('Not implemented yet.');
+}
+
+function updateHookTypesDev(): void {
+  if (__DEV__) {
+    const hookName = ((currentHookNameInDev: any): HookType);
+
+    if (hookTypesDev !== null) {
+      hookTypesUpdateIndexDev++;
+      if (hookTypesDev[hookTypesUpdateIndexDev] !== hookName) {
+        warnOnHookMismatchInDev(hookName);
+      }
+    }
+  }
 }
 
 export const ContextOnlyDispatcher: Dispatcher = {
@@ -1467,7 +1666,15 @@ if (__DEV__) {
     useState<S>(
       initialState: (() => S) | S,
     ): [S, Dispatch<BasicStateAction<S>>] {
-      throw new Error('Not implemented yet.');
+      currentHookNameInDev = 'useState';
+      updateHookTypesDev();
+      const prevDispatcher = ReactSharedInternals.H;
+      ReactSharedInternals.H = InvalidNestedHooksDispatcherOnUpdateInDEV;
+      try {
+        return updateState(initialState);
+      } finally {
+        ReactSharedInternals.H = prevDispatcher;
+      }
     },
     useDebugValue<T>(value: T, formatterFn: ?(value: T) => mixed): void {
       throw new Error('Not implemented yet.');
