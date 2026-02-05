@@ -62,11 +62,11 @@ import {
   OffscreenLane,
   DeferredLane,
   NoLanes,
-  // isSubsetOfLanes,
+  isSubsetOfLanes,
   includesBlockingLane,
   // includesOnlyNonUrgentLanes,
   mergeLanes,
-  // removeLanes,
+  removeLanes,
   intersectLanes,
   isTransitionLane,
   markRootEntangled,
@@ -114,10 +114,10 @@ import {
 import getComponentNameFromFiber from 'react-reconciler/src/getComponentNameFromFiber';
 import is from 'shared/objectIs';
 // import isArray from 'shared/isArray';
-// import {
-//   markWorkInProgressReceivedUpdate,
-//   checkIfWorkInProgressReceivedUpdate,
-// } from './ReactFiberBeginWork';
+import {
+  markWorkInProgressReceivedUpdate,
+  // checkIfWorkInProgressReceivedUpdate,
+} from './ReactFiberBeginWork';
 // import {
 //   getIsHydrating,
 //   tryToClaimNextHydratableFormMarkerInstance,
@@ -152,11 +152,11 @@ import {now} from './Scheduler';
 // } from './ReactFiberThenable';
 import type {ThenableState} from './ReactFiberThenable';
 import type {Transition} from 'react/src/ReactStartTransition';
-// import {
-//   peekEntangledActionLane,
-//   peekEntangledActionThenable,
-//   chainThenableValue,
-// } from './ReactFiberAsyncAction';
+import {
+  peekEntangledActionLane,
+  // peekEntangledActionThenable,
+  // chainThenableValue,
+} from './ReactFiberAsyncAction';
 // import {requestTransitionLane} from './ReactFiberRootScheduler';
 // import {isCurrentTreeHidden} from './ReactFiberHiddenContext';
 // import {requestCurrentTransition} from './ReactFiberTransition';
@@ -1020,7 +1020,73 @@ function updateReducerImpl<S, A>(
     let update = first;
     let didReadFromEntangledAsyncAction = false;
     do {
-      throw new Error('Not implemented yet.');
+      // An extra OffscreenLane bit is added to updates that were made to
+      // a hidden tree, so that we can distinguish them from updates that were
+      // already there when the tree was hidden.
+      const updateLane = removeLanes(update.lane, OffscreenLane);
+      const isHiddenUpdate = updateLane !== update.lane;
+
+      // Check if this update was made while the tree was hidden. If so, then
+      // it's not a "base" update and we should disregard the extra base lanes
+      // that were added to renderLanes when we entered the Offscreen tree.
+      let shouldSkipUpdate = isHiddenUpdate
+        ? !isSubsetOfLanes(getWorkInProgressRootRenderLanes(), updateLane)
+        : !isSubsetOfLanes(renderLanes, updateLane);
+
+      if (enableGestureTransition && updateLane === GestureLane) {
+        throw new Error('Not implemented yet.');
+      }
+
+      if (shouldSkipUpdate) {
+        throw new Error('Not implemented yet.');
+      } else {
+        // This update does have sufficient priority.
+
+        // Check if this is an optimistic update.
+        const revertLane = update.revertLane;
+        if (revertLane === NoLane) {
+          // This is not an optimistic update, and we're going to apply it now.
+          // But, if there were earlier updates that were skipped, we need to
+          // leave this update in the queue so it can be rebased later.
+          if (newBaseQueueLast !== null) {
+            const clone: Update<S, A> = {
+              // This update is going to be committed so we never want uncommit
+              // it. Using NoLane works because 0 is a subset of all bitmasks, so
+              // this will never be skipped by the check above.
+              lane: NoLane,
+              revertLane: NoLane,
+              gesture: null,
+              action: update.action,
+              hasEagerState: update.hasEagerState,
+              eagerState: update.eagerState,
+              next: (null: any),
+            };
+            newBaseQueueLast = newBaseQueueLast.next = clone;
+          }
+
+          // Check if this update is part of a pending async action. If so,
+          // we'll need to suspend until the action has finished, so that it's
+          // batched together with future updates in the same action.
+          if (updateLane === peekEntangledActionLane()) {
+            didReadFromEntangledAsyncAction = true;
+          }
+        } else {
+          throw new Error('Not implemented yet.');
+        }
+        // Process this update.
+        const action = update.action;
+        if (shouldDoubleInvokeUserFnsInHooksDEV) {
+          reducer(newState, action);
+        }
+        if (update.hasEagerState) {
+          // If this update is a state update (not a reducer) and was processed eagerly,
+          // we can use the eagerly computed state
+          newState = ((update.eagerState: any): S);
+        } else {
+          newState = reducer(newState, action);
+        }
+      }
+      update = update.next;
     } while (update !== null && update !== first);
 
     if (newBaseQueueLast === null) {
@@ -1032,24 +1098,24 @@ function updateReducerImpl<S, A>(
     // Mark that the fiber performed work, but only if the new state is
     // different from the current state.
     if (!is(newState, hook.memoizedState)) {
-      // markWorkInProgressReceivedUpdate();
+      markWorkInProgressReceivedUpdate();
 
-      // // Check if this update is part of a pending async action. If so, we'll
-      // // need to suspend until the action has finished, so that it's batched
-      // // together with future updates in the same action.
-      // // TODO: Once we support hooks inside useMemo (or an equivalent
-      // // memoization boundary like Forget), hoist this logic so that it only
-      // // suspends if the memo boundary produces a new value.
-      // if (didReadFromEntangledAsyncAction) {
-      //   const entangledActionThenable = peekEntangledActionThenable();
-      //   if (entangledActionThenable !== null) {
-      //     // TODO: Instead of the throwing the thenable directly, throw a
-      //     // special object like `use` does so we can detect if it's captured
-      //     // by userspace.
-      //     throw entangledActionThenable;
-      //   }
-      // }
-      throw new Error('Not implemented yet.');
+      // Check if this update is part of a pending async action. If so, we'll
+      // need to suspend until the action has finished, so that it's batched
+      // together with future updates in the same action.
+      // TODO: Once we support hooks inside useMemo (or an equivalent
+      // memoization boundary like Forget), hoist this logic so that it only
+      // suspends if the memo boundary produces a new value.
+      if (didReadFromEntangledAsyncAction) {
+        // const entangledActionThenable = peekEntangledActionThenable();
+        // if (entangledActionThenable !== null) {
+        //   // TODO: Instead of the throwing the thenable directly, throw a
+        //   // special object like `use` does so we can detect if it's captured
+        //   // by userspace.
+        //   throw entangledActionThenable;
+        // }
+        throw new Error('Not implemented yet.');
+      }
     }
 
     hook.memoizedState = newState;
@@ -1057,7 +1123,6 @@ function updateReducerImpl<S, A>(
     hook.baseQueue = newBaseQueueLast;
 
     queue.lastRenderedState = newState;
-    throw new Error('Not implemented yet.');
   }
   if (baseQueue === null) {
     // `queue.lanes` is used for entangling transitions. We can set it back to
@@ -1237,7 +1302,8 @@ function updateHookTypesDev(): void {
     if (hookTypesDev !== null) {
       hookTypesUpdateIndexDev++;
       if (hookTypesDev[hookTypesUpdateIndexDev] !== hookName) {
-        warnOnHookMismatchInDev(hookName);
+        // warnOnHookMismatchInDev(hookName);
+        throw new Error('Not implemented yet.');
       }
     }
   }

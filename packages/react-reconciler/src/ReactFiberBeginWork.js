@@ -1082,3 +1082,7 @@ function checkScheduledUpdateOrContext(
 }
 
 export {beginWork};
+
+export function markWorkInProgressReceivedUpdate() {
+  didReceiveUpdate = true;
+}
